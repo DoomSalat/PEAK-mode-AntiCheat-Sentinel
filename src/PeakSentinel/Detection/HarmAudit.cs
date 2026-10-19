@@ -1,20 +1,13 @@
 using System.Collections.Generic;
+using PeakSentinel.Network;
 using PeakSentinel.Reporting;
+using PeakSentinel.Settings;
 using UnityEngine;
-using PhotonPlayer = Photon.Realtime.Player;
 
 namespace PeakSentinel.Detection
 {
-    public sealed class HarmAudit
+    public sealed class HarmAudit : IRpcAudit
     {
-        private const string Die = "RPCA_Die";
-        private const string SetDead = "RPCA_SetDead";
-        private const string PassOut = "RPCA_PassOut";
-        private const string Zombify = "RPCA_Zombify";
-        private const string Petrify = "RPC_PetrifyInstantly";
-        private const string Warp = "WarpPlayerRPC";
-        private const string ForceAtPosition = "RPCA_AddForceAtPosition";
-        private const string ForceToBodyPart = "RPCA_AddForceToBodyPart";
         private const float FlingForce = 1500f;
         private const string KillsTag = "kills other players";
         private const string KnocksOutTag = "knocks out other players";
@@ -24,7 +17,7 @@ namespace PeakSentinel.Detection
 
         private static readonly HashSet<string> Methods = new HashSet<string> // Static: fixed set of RPC names that can harm another player
         {
-            Die, SetDead, PassOut, Zombify, Petrify, Warp, ForceAtPosition, ForceToBodyPart,
+            RpcNames.Die, RpcNames.SetDead, RpcNames.PassOut, RpcNames.Zombify, RpcNames.Petrify, RpcNames.Warp, RpcNames.ForceAtPosition, RpcNames.ForceToBodyPart,
         };
 
         private readonly SuspicionReport _report;
@@ -41,61 +34,47 @@ namespace PeakSentinel.Detection
             return Methods.Contains(method);
         }
 
-        public bool Inspect(string method, PhotonPlayer sender, PhotonPlayer victim, object[] arguments)
+        public bool Inspect(RpcCall call)
         {
-            if (!_detection.Harm.Value || sender == null || victim == null || sender.ActorNumber == victim.ActorNumber || sender.IsMasterClient)
+            if (!_detection.HarmToOthers.Value || call.Sender == null || call.Owner == null || call.FromOwner || call.FromHost)
                 return true;
 
-            string name = SuspicionReport.NameOf(victim);
+            string victim = PlayerNames.Name(call.Owner);
 
-            switch (method)
+            switch (call.Method)
             {
-                case Die:
-                case SetDead:
-                    return Refuse(sender, KillsTag, $"killed {name}");
+                case RpcNames.Die:
+                case RpcNames.SetDead:
+                    return Refuse(call, KillsTag, $"killed {victim}");
 
-                case PassOut:
-                    return Refuse(sender, KnocksOutTag, $"knocked out {name}");
+                case RpcNames.PassOut:
+                    return Refuse(call, KnocksOutTag, $"knocked out {victim}");
 
-                case Zombify:
-                case Petrify:
-                    return Refuse(sender, CursesTag, $"{(method == Zombify ? "zombified" : "petrified")} {name}");
+                case RpcNames.Zombify:
+                    return Refuse(call, CursesTag, $"zombified {victim}");
 
-                case Warp:
-                    return Refuse(sender, TeleportsTag, $"teleported {name} to {Argument(arguments, 0)}");
+                case RpcNames.Petrify:
+                    return Refuse(call, CursesTag, $"petrified {victim}");
 
-                case ForceAtPosition:
-                    return CheckFling(sender, name, Magnitude(arguments, 0));
+                case RpcNames.Warp:
+                    return Refuse(call, TeleportsTag, $"teleported {victim} to {call.Argument(0)}");
 
-                case ForceToBodyPart:
-                    return CheckFling(sender, name, Mathf.Max(Magnitude(arguments, 1), Magnitude(arguments, 2)));
+                case RpcNames.ForceAtPosition:
+                    return CheckFling(call, victim, call.MagnitudeAt(0));
 
                 default:
-                    return true;
+                    return CheckFling(call, victim, Mathf.Max(call.MagnitudeAt(1), call.MagnitudeAt(2)));
             }
         }
 
-        private bool CheckFling(PhotonPlayer sender, string victim, float force)
+        private bool CheckFling(RpcCall call, string victim, float force)
         {
-            return force < FlingForce || Refuse(sender, FlingsTag, $"flung {victim} with force {force:F0}");
+            return force < FlingForce || Refuse(call, FlingsTag, $"flung {victim} with force {force:F0}");
         }
 
-        private bool Refuse(PhotonPlayer sender, string tag, string action)
+        private bool Refuse(RpcCall call, string tag, string action)
         {
-            bool block = _detection.BlockHarm.Value;
-            _report.Tag(sender, tag);
-            _report.Flag(sender, FindingCategory.Cheats, action, block);
-            return !block;
-        }
-
-        private float Magnitude(object[] arguments, int index)
-        {
-            return arguments != null && arguments.Length > index && arguments[index] is Vector3 force ? force.magnitude : 0f;
-        }
-
-        private object Argument(object[] arguments, int index)
-        {
-            return arguments != null && arguments.Length > index ? arguments[index] : null;
+            return _report.Refuse(call.Sender, FindingCategory.Cheats, tag, action, _detection.BlockHarmToOthers.Value);
         }
     }
 }

@@ -1,13 +1,16 @@
 using System.IO;
 using BepInEx;
-using BepInEx.Configuration;
 using HarmonyLib;
 using PeakSentinel.Detection;
-using PeakSentinel.Moderation;
+using PeakSentinel.Detection.Flight;
+using PeakSentinel.Detection.Stamina;
+using PeakSentinel.Network;
 using PeakSentinel.Patches;
+using PeakSentinel.Protection;
 using PeakSentinel.Reporting;
+using PeakSentinel.Settings;
+using PeakSentinel.Ui;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace PeakSentinel
 {
@@ -16,10 +19,8 @@ namespace PeakSentinel
     {
         public const string Guid = "peaksentinel";
         public const string Name = "Peak Sentinel";
-        public const string Version = "0.1.1";
+        public const string Version = "0.1.2";
 
-        private const string DebugSection = "Debug";
-        private const string ManagerSection = "Manager";
         private const string TraceFile = "PeakSentinel.log";
         private const string BansFile = "PeakSentinel.bans.txt";
 
@@ -28,30 +29,30 @@ namespace PeakSentinel
 
         private void Awake()
         {
-            ConfigEntry<bool> traceEnabled = Config.Bind(DebugSection, "TraceFile", true, $"Write a debug trace to BepInEx/{TraceFile}: every item RPC (sender, view owner, arguments), every item created over the network and every finding.");
-            ConfigEntry<bool> traceAllRpcs = Config.Bind(DebugSection, "TraceAllRpcs", false, "Also write every other RPC to the trace (very noisy, for finding new cheat paths).");
-            _trace = new DebugTrace(Path.Combine(Paths.BepInExRootPath, TraceFile), traceEnabled, traceAllRpcs);
+            DebugSettings debug = new DebugSettings(Config, TraceFile);
+            ManagerSettings manager = new ManagerSettings(Config);
             ProtectionSettings protection = new ProtectionSettings(Config);
             DetectionSettings detection = new DetectionSettings(Config);
             OtherSettings other = new OtherSettings(Config);
-            FindingLog findings = new FindingLog(Config.Bind(ManagerSection, "MaxLogEntries", 500, new ConfigDescription("How many findings the manager window keeps (oldest are dropped first). Also editable in the Log tab.", new AcceptableValueRange<int>(FindingLog.MinCapacity, FindingLog.MaxCapacity))));
+
+            _trace = new DebugTrace(Path.Combine(Paths.BepInExRootPath, TraceFile), debug.TraceFile, debug.TraceAllRpcs);
+            FindingLog findings = new FindingLog(manager.LogEntries);
             SuspicionReport report = new SuspicionReport(Logger, _trace, findings);
-            SentinelHooks.Report = report;
-            SentinelHooks.Environment = new EnvironmentMarks();
-            SentinelHooks.Hands = new HandGuard(report, protection);
-            SentinelHooks.Rpc = new RpcAudit(report, _trace, protection, new HarmAudit(report, detection), new WorldAudit(report, detection), SentinelHooks.Hands, new KickShield(report, other));
-            SentinelHooks.Instantiate = new InstantiateAudit(report, _trace, detection);
-            GameObject host = new GameObject(Name);
-            DontDestroyOnLoad(host);
-            host.hideFlags = HideFlags.HideAndDontSave;
             BanList bans = new BanList(Path.Combine(Paths.ConfigPath, BansFile));
+            GameObject host = new GameObject(Name) { hideFlags = HideFlags.HideAndDontSave };
+            DontDestroyOnLoad(host);
+            EffectAudit effects = host.AddComponent<EffectAudit>();
+            effects.Initialize(report, _trace, detection);
+            WireNetwork(report, protection, detection, other, effects);
             BanGuard banGuard = host.AddComponent<BanGuard>();
             banGuard.Initialize(report, bans);
-            SentinelWindow window = host.AddComponent<SentinelWindow>();
-            window.Initialize($"{Name} {Version}", Config.Bind(ManagerSection, "ToggleKey", Key.F6, "Key that opens or closes the Sentinel manager window: findings and protection switches (None = no key)."), protection, detection, other, findings, bans, banGuard);
-            SentinelHooks.Window = window;
             host.AddComponent<CheatModScan>().Initialize(report, detection);
-            host.AddComponent<FlightAudit>().Initialize(report, _trace, detection, new FlightSettings(Config), new RopeLinks(), SentinelHooks.Environment);
+            host.AddComponent<FlightAudit>().Initialize(report, _trace, detection, new FlightSettings(Config), new FlightExemptions(new RopeLinks(), SentinelHooks.Environment));
+            host.AddComponent<StaminaAudit>().Initialize(report, _trace, detection, new StaminaSettings(Config));
+            SentinelWindow window = host.AddComponent<SentinelWindow>();
+            window.Initialize($"{Name} {Version}", manager, protection, detection, other, findings, bans, banGuard);
+            SentinelHooks.Window = window;
+
             _harmony = new Harmony(Guid);
             _harmony.PatchAll(typeof(SentinelPlugin).Assembly);
             Logger.LogInfo($"{Name} {Version} loaded: block cheat spawns {protection.BlockCheatSpawns.Value}, trace in {_trace.Path}");
@@ -61,6 +62,22 @@ namespace PeakSentinel
         {
             _harmony?.UnpatchSelf();
             _trace?.Dispose();
+        }
+
+        private void WireNetwork(SuspicionReport report, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, EffectAudit effects)
+        {
+            HandGuard hands = new HandGuard(report, protection);
+            SentinelHooks.Report = report;
+            SentinelHooks.Environment = new EnvironmentMarks();
+            SentinelHooks.Hands = hands;
+            SentinelHooks.Instantiate = new InstantiateAudit(report, _trace, detection);
+            SentinelHooks.Router = new RpcRouter(_trace,
+                new ItemRpcAudit(report, protection),
+                hands,
+                new KickShield(report, other),
+                new HarmAudit(report, detection),
+                new WorldAudit(report, detection),
+                effects);
         }
     }
 }

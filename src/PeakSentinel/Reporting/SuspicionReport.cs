@@ -39,39 +39,33 @@ namespace PeakSentinel.Reporting
             Report(culprit, category, action, blocked ? FindingKind.Blocked : FindingKind.Suspicious);
         }
 
+        public bool Refuse(PhotonPlayer culprit, FindingCategory category, string tag, string action, bool block)
+        {
+            Tag(culprit, tag);
+            Flag(culprit, category, action, block);
+            return !block;
+        }
+
         public void Notice(PhotonPlayer culprit, FindingCategory category, string action)
         {
-            _log.LogInfo($"{NoticeLevel} {NameOf(culprit)} (actor {ActorOf(culprit)}): {action}");
+            _log.LogInfo($"{NoticeLevel} {PlayerNames.Name(culprit)} (actor {PlayerNames.Actor(culprit)}): {action}");
             _trace.Finding(NoticeLevel, culprit, action);
-            _findings.Add(ActorOf(culprit), NameOf(culprit), action, FindingKind.Notice, category);
+            _findings.Add(PlayerNames.Actor(culprit), PlayerNames.Name(culprit), action, FindingKind.Notice, category);
         }
 
         public void Tag(PhotonPlayer culprit, string tag)
         {
-            _findings.Tag(ActorOf(culprit), tag);
-        }
-
-        public static string NameOf(PhotonPlayer player) // Static: pure formatting shared by the audits
-        {
-            if (player == null)
-                return "unknown";
-
-            return string.IsNullOrEmpty(player.NickName) ? $"actor {player.ActorNumber}" : player.NickName;
-        }
-
-        public static int ActorOf(PhotonPlayer player) // Static: pure formatting shared by the audits
-        {
-            return player == null ? 0 : player.ActorNumber;
+            _findings.Tag(PlayerNames.Actor(culprit), tag);
         }
 
         private void Report(PhotonPlayer culprit, FindingCategory category, string action, FindingKind kind)
         {
-            string name = NameOf(culprit);
+            string name = PlayerNames.Name(culprit);
             string level = LevelOf(kind);
             string text = kind == FindingKind.Blocked ? BlockedPrefix + action : action;
-            _log.LogWarning($"{level} {name} (actor {ActorOf(culprit)}): {action}");
+            _log.LogWarning($"{level} {name} (actor {PlayerNames.Actor(culprit)}): {action}");
             _trace.Finding(level, culprit, action);
-            _findings.Add(ActorOf(culprit), name, text, kind, category);
+            _findings.Add(PlayerNames.Actor(culprit), name, text, kind, category);
             Show(name, text);
         }
 

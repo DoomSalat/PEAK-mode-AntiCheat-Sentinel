@@ -1,0 +1,9 @@
+{
+  "name": "Peak_Sentinel",
+  "version_number": "{VERSION}",
+  "website_url": "https://github.com/DoomSalat/PEAK-mode-AntiCheat-Sentinel",
+  "description": "Network anticheat: shows WHO spawned items, killed, teleported or flung others, faked host events, flew or used infinite stamina. Host blocking, kick and ban, F6 manager window.",
+  "dependencies": [
+    "BepInEx-BepInExPack_PEAK-5.4.75301"
+  ]
+}

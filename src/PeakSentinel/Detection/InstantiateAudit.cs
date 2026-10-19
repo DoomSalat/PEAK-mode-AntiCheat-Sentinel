@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using PeakSentinel.Reporting;
+using PeakSentinel.Settings;
 using UnityEngine;
 using PhotonPlayer = Photon.Realtime.Player;
 
@@ -34,10 +35,7 @@ namespace PeakSentinel.Detection
             if (!_detection.DangerousSpawns.Value || creator == null || creator.IsMasterClient || !Dangerous.Contains(prefab))
                 return true;
 
-            bool block = _detection.BlockDangerousSpawns.Value;
-            _report.Tag(creator, DangerousTag);
-            _report.Flag(creator, FindingCategory.Cheats, $"spawned '{prefab}' (only the host may spawn it)", block);
-            return !block;
+            return _report.Refuse(creator, FindingCategory.Cheats, DangerousTag, $"spawned '{prefab}' (only the host may spawn it)", _detection.BlockDangerousSpawns.Value);
         }
 
         public void Inspect(PhotonPlayer creator, GameObject created, bool fromNetwork)

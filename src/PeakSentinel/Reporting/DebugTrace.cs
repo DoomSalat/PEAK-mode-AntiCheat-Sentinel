@@ -44,6 +44,16 @@ namespace PeakSentinel.Reporting
             Write($"FLIGHT {Describe(player)}: {numbers}");
         }
 
+        public void Stamina(PhotonPlayer player, string numbers)
+        {
+            Write($"STAMINA {Describe(player)}: {numbers}");
+        }
+
+        public void Effect(PhotonPlayer player, string text)
+        {
+            Write($"EFFECT {Describe(player)}: {text}");
+        }
+
         public void Finding(string level, PhotonPlayer culprit, string action)
         {
             Write($"{level} {Describe(culprit)}: {action}");
@@ -66,7 +76,7 @@ namespace PeakSentinel.Reporting
                 return Null;
 
             string host = player.IsMasterClient ? " host" : string.Empty;
-            return $"{SuspicionReport.NameOf(player)}#{player.ActorNumber}{host}";
+            return $"{PlayerNames.Name(player)}#{player.ActorNumber}{host}";
         }
 
         private string Join(object[] arguments)

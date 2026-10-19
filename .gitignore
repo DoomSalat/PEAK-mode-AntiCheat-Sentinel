@@ -6,6 +6,9 @@ obj/
 .idea/
 *.DotSettings.user
 
+# Packed releases
+dist/
+
 # OS
 Thumbs.db
 .DS_Store

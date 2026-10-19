@@ -1,18 +1,17 @@
 using System;
 using System.Collections.Generic;
+using PeakSentinel.Network;
 using PeakSentinel.Reporting;
+using PeakSentinel.Settings;
 using Photon.Pun;
 using UnityEngine;
 using Zorro.Core;
-using PhotonPlayer = Photon.Realtime.Player;
 
 namespace PeakSentinel.Detection
 {
-    public sealed class WorldAudit
+    public sealed class WorldAudit : IRpcAudit
     {
         private const string WorldTag = "breaks host-only game events";
-        private const string HelicopterRpc = "TriggerHelicopter";
-        private const string BananaRpc = "RPCA_TriggerBanana";
         private const int FlareLitKey = 3;
         private const float PeakCheckOffset = 10f;
 
@@ -32,60 +31,44 @@ namespace PeakSentinel.Detection
             return Rules.ContainsKey(method);
         }
 
-        public bool Inspect(string method, PhotonPlayer sender, PhotonView view, object[] arguments)
+        public bool Inspect(RpcCall call)
         {
-            if (!_detection.WorldEvents.Value || sender == null || view == null || !Rules.TryGetValue(method, out Rule[] rules))
+            if (!_detection.HostOnlyEvents.Value || call.Sender == null || call.View == null)
                 return true;
 
-            foreach (Rule rule in rules)
+            foreach (Rule rule in Rules[call.Method])
             {
-                if (view.GetComponent(rule.Component) == null)
+                if (call.View.GetComponent(rule.Component) == null)
                     continue;
 
-                if (IsAllowed(rule, method, sender, view, arguments))
-                    return true;
-
-                bool block = _detection.BlockWorldEvents.Value;
-                _report.Tag(sender, WorldTag);
-                _report.Flag(sender, FindingCategory.Cheats, Describe(rule, method, view, arguments), block);
-                return !block;
+                return IsAllowed(rule, call) || _report.Refuse(call.Sender, FindingCategory.Cheats, WorldTag, Describe(rule, call), _detection.BlockHostOnlyEvents.Value);
             }
 
             return true;
         }
 
-        private bool IsAllowed(Rule rule, string method, PhotonPlayer sender, PhotonView view, object[] arguments)
+        private bool IsAllowed(Rule rule, RpcCall call)
         {
-            bool isOwner = view.Owner != null && view.Owner.ActorNumber == sender.ActorNumber;
-
             switch (rule.Allowed)
             {
                 case Sender.Host:
-                    return sender.IsMasterClient || (method == HelicopterRpc && IsHelicopterLegit(view));
+                    return call.FromHost || (call.Method == RpcNames.TriggerHelicopter && IsHelicopterLegit(call.View));
 
                 case Sender.Owner:
-                    return isOwner;
-
-                case Sender.Victim:
-                    PhotonView victim = VictimOf(arguments);
-                    return victim == null || (victim.Owner != null && victim.Owner.ActorNumber == sender.ActorNumber);
+                    return call.FromOwner;
 
                 default:
-                    return true;
+                    PhotonView victim = call.ViewAt(0);
+                    return victim == null || call.SentBy(victim.Owner);
             }
         }
 
-        private string Describe(Rule rule, string method, PhotonView view, object[] arguments)
+        private string Describe(Rule rule, RpcCall call)
         {
-            if (method == BananaRpc)
-                return $"{rule.Action} {SuspicionReport.NameOf(VictimOf(arguments)?.Owner)}";
+            if (call.Method == RpcNames.TriggerBanana)
+                return $"{rule.Action} {PlayerNames.Name(call.ViewAt(0)?.Owner)}";
 
-            return rule.NamesTarget ? $"{rule.Action} {SuspicionReport.NameOf(view.Owner)}" : rule.Action;
-        }
-
-        private PhotonView VictimOf(object[] arguments)
-        {
-            return arguments != null && arguments.Length > 0 && arguments[0] is int viewId ? PhotonView.Find(viewId) : null;
+            return rule.NamesTarget ? $"{rule.Action} {PlayerNames.Name(call.Owner)}" : rule.Action;
         }
 
         private bool IsHelicopterLegit(PhotonView view)
@@ -100,10 +83,10 @@ namespace PeakSentinel.Detection
         private static Dictionary<string, Rule[]> BuildRules() // Static: builds the fixed rule table once
         {
             Dictionary<string, Rule[]> rules = new Dictionary<string, Rule[]>();
-            Add(rules, "RPCA_TriggerBanana", typeof(BananaPeel), Sender.Victim, "made slip on a banana:");
+            Add(rules, RpcNames.TriggerBanana, typeof(BananaPeel), Sender.Victim, "made slip on a banana:");
             Add(rules, "DisperseRPC", typeof(BeeSwarm), Sender.Host, "dispersed a bee swarm");
             Add(rules, "SetBeesAngryRPC", typeof(BeeSwarm), Sender.Host, "changed a bee swarm's anger");
-            Add(rules, HelicopterRpc, typeof(Flare), Sender.Host, "triggered the rescue helicopter");
+            Add(rules, RpcNames.TriggerHelicopter, typeof(Flare), Sender.Host, "triggered the rescue helicopter");
             Add(rules, "Extinguish_Rpc", typeof(Campfire), Sender.Host, "tried to extinguish a campfire");
             Add(rules, "RPCEndGame", typeof(Character), Sender.Host, "forced the game to end");
             Add(rules, "RPCEndGame_ForceWin", typeof(Character), Sender.Host, "forced a win");

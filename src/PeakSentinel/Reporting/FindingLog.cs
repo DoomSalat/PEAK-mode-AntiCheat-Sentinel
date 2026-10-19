@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using BepInEx.Configuration;
+using PeakSentinel.Settings;
 using UnityEngine;
 
 namespace PeakSentinel.Reporting
@@ -9,9 +10,6 @@ namespace PeakSentinel.Reporting
     public sealed class FindingLog
     {
         private const string Separator = ", ";
-
-        public const int MinCapacity = 50;
-        public const int MaxCapacity = 5000;
 
         private readonly List<Finding> _findings = new List<Finding>();
         private readonly Dictionary<int, PlayerRecord> _players = new Dictionary<int, PlayerRecord>();
@@ -46,7 +44,7 @@ namespace PeakSentinel.Reporting
 
         public void Resize(int capacity)
         {
-            _capacity.Value = Mathf.Clamp(capacity, MinCapacity, MaxCapacity);
+            _capacity.Value = Mathf.Clamp(capacity, ManagerSettings.MinLogEntries, ManagerSettings.MaxLogEntries);
             Trim();
             Version++;
         }

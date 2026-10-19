@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using PeakSentinel.Reporting;
+using PeakSentinel.Settings;
 using Photon.Pun;
 using UnityEngine;
 using PhotonPlayer = Photon.Realtime.Player;
@@ -32,7 +33,7 @@ namespace PeakSentinel.Detection
 
         private void Update()
         {
-            if (!_detection.CheatMods.Value || Time.unscaledTime < _nextScan || !PhotonNetwork.InRoom)
+            if (!_detection.CheatModMarkers.Value || Time.unscaledTime < _nextScan || !PhotonNetwork.InRoom)
                 return;
 
             _nextScan = Time.unscaledTime + ScanSeconds;
@@ -61,9 +62,8 @@ namespace PeakSentinel.Detection
                 if (!player.CustomProperties.ContainsKey(key) || !_reported.Add((player.ActorNumber, key)))
                     continue;
 
-                bool kick = _detection.KickCheatMods.Value && PhotonNetwork.IsMasterClient;
-                _report.Tag(player, tag);
-                _report.Flag(player, FindingCategory.Cheats, kick ? $"is a {tag}, kicked" : $"is a {tag}", kick);
+                bool kick = _detection.KickCheatModUsers.Value && PhotonNetwork.IsMasterClient;
+                _report.Refuse(player, FindingCategory.Cheats, tag, kick ? $"is a {tag}, kicked" : $"is a {tag}", kick);
 
                 if (kick)
                 {

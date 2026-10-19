@@ -16,7 +16,7 @@ namespace PeakSentinel.Patches
         [HarmonyPatch(typeof(PhotonNetwork), nameof(PhotonNetwork.ExecuteRpc))]
         public static bool InspectRpc(Hashtable rpcData, PhotonPlayer sender)
         {
-            return SentinelHooks.Rpc == null || SentinelHooks.Rpc.Inspect(rpcData, sender);
+            return SentinelHooks.Router == null || SentinelHooks.Router.Inspect(rpcData, sender);
         }
 
         [HarmonyPrefix]

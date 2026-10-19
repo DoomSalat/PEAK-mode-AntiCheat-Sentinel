@@ -1,0 +1,210 @@
+using System;
+using System.Collections.Generic;
+using PeakSentinel.Protection;
+using PeakSentinel.Reporting;
+using PeakSentinel.Settings;
+using PeakSentinel.Ui.Pages;
+using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
+using UnityEngine.UI;
+
+namespace PeakSentinel.Ui
+{
+    public sealed class SentinelWindow : MonoBehaviour
+    {
+        private const string CanvasName = "PeakSentinelCanvas";
+        private const int SortingOrder = 260;
+        private const float Width = 1100f;
+        private const float Height = 760f;
+        private const float TopMargin = 60f;
+        private const float RefreshSeconds = 0.25f;
+        private const float TitleSize = 28f;
+        private const float TabSize = 21f;
+
+        private static readonly string[] Tabs = { "Log", "Items", "Cheats", "Other", "Players", "Bans" }; // Static: fixed tab captions, in page order
+
+        private readonly FeedFilter _filter = new FeedFilter();
+        private readonly AvatarCache _avatars = new AvatarCache();
+        private readonly List<(GameObject Root, ITabPage Page)> _pages = new List<(GameObject Root, ITabPage Page)>();
+        private readonly List<Image> _tabImages = new List<Image>();
+        private string _title;
+        private ManagerSettings _manager;
+        private ProtectionSettings _protection;
+        private DetectionSettings _detection;
+        private OtherSettings _other;
+        private FindingLog _findings;
+        private BanList _bans;
+        private BanGuard _banGuard;
+        private UiFactory _ui;
+        private SettingsBinder _binder;
+        private HotkeyButton _hotkey;
+        private GameObject _canvas;
+        private int _tab;
+        private float _nextRefresh;
+
+        public bool IsOpen { get; private set; }
+
+        public void Initialize(string title, ManagerSettings manager, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, FindingLog findings, BanList bans, BanGuard banGuard)
+        {
+            _title = title;
+            _manager = manager;
+            _protection = protection;
+            _detection = detection;
+            _other = other;
+            _findings = findings;
+            _bans = bans;
+            _banGuard = banGuard;
+        }
+
+        private void Update()
+        {
+            Keyboard keyboard = Keyboard.current;
+
+            if (keyboard == null)
+                return;
+
+            if (_hotkey != null && _hotkey.Listening)
+                _hotkey.Capture(keyboard);
+            else if (_manager.ToggleKey.Value != Key.None && keyboard[_manager.ToggleKey.Value].wasPressedThisFrame)
+                SwitchVisibility();
+
+            if (IsOpen && Time.unscaledTime >= _nextRefresh)
+                Refresh();
+        }
+
+        private void OnDestroy()
+        {
+            if (_canvas != null)
+                Destroy(_canvas);
+        }
+
+        private void SwitchVisibility()
+        {
+            if (IsOpen)
+                Close();
+            else
+                Open();
+        }
+
+        private void Open()
+        {
+            TMP_FontAsset font = GameFont();
+
+            if (_canvas == null || _ui.Font != font)
+                Build(font);
+
+            EnsureEventSystem();
+            _canvas.SetActive(true);
+            IsOpen = true;
+            Refresh();
+        }
+
+        private void Close()
+        {
+            _hotkey.StopListening();
+            _canvas.SetActive(false);
+            IsOpen = false;
+        }
+
+        private void Build(TMP_FontAsset font)
+        {
+            if (_canvas != null)
+                Destroy(_canvas);
+
+            _pages.Clear();
+            _tabImages.Clear();
+            _ui = new UiFactory(font);
+            _binder = new SettingsBinder(_ui);
+            _canvas = _ui.Canvas(CanvasName, SortingOrder);
+            DontDestroyOnLoad(_canvas);
+
+            RectTransform panel = _ui.Panel(_canvas.transform, new Vector2(Width, Height), TopMargin);
+            RectTransform layout = _ui.Column(panel, 10f, new RectOffset(20, 20, 12, 20));
+            _ui.Stretch(layout);
+            BuildHeader(layout, panel);
+            BuildTabs(layout);
+
+            RectTransform body = _ui.Column(layout, 0f, new RectOffset(0, 0, 0, 0));
+            _ui.Flexible(body, 1f, 1f);
+            PageContext context = new PageContext(_ui, _binder, _filter, _findings, Refresh);
+            AddPage(body, page => new LogPage(context, page));
+            AddPage(body, page => new ItemsPage(context, page, _protection));
+            AddPage(body, page => new CheatsPage(context, page, _detection));
+            AddPage(body, page => new OtherPage(context, page, _other));
+            AddPage(body, page => new PlayersPage(context, page, _banGuard, _avatars));
+            AddPage(body, page => new BansPage(_ui, page, _bans));
+            Select(_tab);
+        }
+
+        private void BuildHeader(Transform layout, RectTransform panel)
+        {
+            RectTransform header = _ui.Row(layout, 10f);
+            TextMeshProUGUI title = _ui.Label(header, _title, TitleSize, UiPalette.Text, false);
+            title.alignment = TextAlignmentOptions.MidlineLeft;
+            title.raycastTarget = true;
+            title.gameObject.AddComponent<DragHandle>().Initialize(panel, _canvas.GetComponent<Canvas>());
+            _ui.Flexible(title, 1f, 0f);
+            _hotkey = new HotkeyButton(_ui, header, _manager.ToggleKey);
+        }
+
+        private void BuildTabs(Transform layout)
+        {
+            RectTransform tabs = _ui.Row(layout, 8f);
+
+            for (int i = 0; i < Tabs.Length; i++)
+            {
+                int index = i;
+                _tabImages.Add(_ui.Button(tabs, Tabs[i], 0f, TabSize, () => Select(index)).Button.image);
+            }
+        }
+
+        private void AddPage(RectTransform body, Func<Transform, ITabPage> create)
+        {
+            RectTransform root = _ui.Column(body, 8f, new RectOffset(0, 0, 0, 0));
+            _ui.Flexible(root, 1f, 1f);
+            _pages.Add((root.gameObject, create(root)));
+        }
+
+        private void Select(int index)
+        {
+            _tab = index;
+
+            for (int i = 0; i < _pages.Count; i++)
+            {
+                if (i == index)
+                    _pages[i].Root.SetActive(true);
+                else
+                    _pages[i].Root.SetActive(false);
+
+                _tabImages[i].sprite = i == index ? _ui.Sprites.ButtonSelected : _ui.Sprites.ButtonIdle;
+            }
+
+            Refresh();
+        }
+
+        private void Refresh()
+        {
+            _nextRefresh = Time.unscaledTime + RefreshSeconds;
+            _binder.Refresh();
+            _pages[_tab].Page.Refresh();
+        }
+
+        private TMP_FontAsset GameFont()
+        {
+            FontFallbackSwapper swapper = FontFallbackSwapper.instance;
+            return swapper != null && swapper.mainBaseFont != null ? swapper.mainBaseFont : TMP_Settings.defaultFontAsset;
+        }
+
+        private void EnsureEventSystem()
+        {
+            if (EventSystem.current != null)
+                return;
+
+            GameObject system = new GameObject(nameof(EventSystem), typeof(EventSystem), typeof(InputSystemUIInputModule));
+            system.transform.SetParent(_canvas.transform, false);
+        }
+    }
+}
