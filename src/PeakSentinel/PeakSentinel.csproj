@@ -58,6 +58,26 @@
       <HintPath>$(ManagedDirectory)\Unity.InputSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(ManagedDirectory)\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Managers">
+      <HintPath>$(ManagedDirectory)\Managers.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Platforms">
+      <HintPath>$(ManagedDirectory)\Platforms.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(ManagedDirectory)\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(ManagedDirectory)\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEngine.IMGUIModule">
       <HintPath>$(ManagedDirectory)\UnityEngine.IMGUIModule.dll</HintPath>
       <Private>false</Private>

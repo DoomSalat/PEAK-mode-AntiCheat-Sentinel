@@ -39,6 +39,11 @@ namespace PeakSentinel.Reporting
             Write($"INSTANTIATE {prefab} by {Describe(creator)} at {position}");
         }
 
+        public void Flight(PhotonPlayer player, string numbers)
+        {
+            Write($"FLIGHT {Describe(player)}: {numbers}");
+        }
+
         public void Finding(string level, PhotonPlayer culprit, string action)
         {
             Write($"{level} {Describe(culprit)}: {action}");

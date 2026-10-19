@@ -10,11 +10,31 @@ namespace PeakSentinel.Patches
     [HarmonyPatch]
     public static class NetworkPatches // Static: Harmony patch class
     {
+        private const byte PrefabNameKey = 0;
+
         [HarmonyPrefix]
         [HarmonyPatch(typeof(PhotonNetwork), nameof(PhotonNetwork.ExecuteRpc))]
         public static bool InspectRpc(Hashtable rpcData, PhotonPlayer sender)
         {
             return SentinelHooks.Rpc == null || SentinelHooks.Rpc.Inspect(rpcData, sender);
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(PhotonView), nameof(PhotonView.RPC), new[] { typeof(string), typeof(RpcTarget), typeof(object[]) })]
+        public static void NoteOwnRpc(string methodName)
+        {
+            SentinelHooks.Hands?.NoteOutgoing(methodName);
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(PhotonNetwork), nameof(PhotonNetwork.NetworkInstantiate), new[] { typeof(Hashtable), typeof(PhotonPlayer) })]
+        public static bool FilterIncomingInstantiate(Hashtable networkEvent, PhotonPlayer creator, ref GameObject __result)
+        {
+            if (SentinelHooks.Instantiate == null || networkEvent == null || SentinelHooks.Instantiate.AllowCreate(creator, networkEvent[PrefabNameKey] as string))
+                return true;
+
+            __result = null;
+            return false;
         }
 
         [HarmonyPostfix]

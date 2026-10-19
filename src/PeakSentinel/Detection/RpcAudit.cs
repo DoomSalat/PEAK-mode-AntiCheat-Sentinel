@@ -31,12 +31,20 @@ namespace PeakSentinel.Detection
         private readonly SuspicionReport _report;
         private readonly DebugTrace _trace;
         private readonly ProtectionSettings _protection;
+        private readonly HarmAudit _harm;
+        private readonly WorldAudit _world;
+        private readonly HandGuard _hands;
+        private readonly KickShield _kicks;
 
-        public RpcAudit(SuspicionReport report, DebugTrace trace, ProtectionSettings protection)
+        public RpcAudit(SuspicionReport report, DebugTrace trace, ProtectionSettings protection, HarmAudit harm, WorldAudit world, HandGuard hands, KickShield kicks)
         {
+            _kicks = kicks;
+            _hands = hands;
             _report = report;
             _trace = trace;
             _protection = protection;
+            _harm = harm;
+            _world = world;
         }
 
         public bool Inspect(Hashtable rpc, PhotonPlayer sender)
@@ -53,7 +61,7 @@ namespace PeakSentinel.Detection
             PhotonPlayer owner = view == null ? null : view.Owner;
             object[] arguments = rpc[ArgumentsKey] as object[];
 
-            if (_trace.TracesAllRpcs || Watched.Contains(method))
+            if (_trace.TracesAllRpcs || Watched.Contains(method) || _harm.Watches(method) || _world.Watches(method))
                 _trace.Rpc(method, sender, viewId, owner, arguments);
 
             switch (method)
@@ -65,7 +73,7 @@ namespace PeakSentinel.Detection
                     return CheckPickupRequest(sender, view, arguments);
 
                 case PickupAccepted:
-                    return CheckFromHost(sender, owner, "forced an item pickup on");
+                    return CheckFromHost(sender, owner, "forced an item pickup on") && _hands.Allow(view, arguments);
 
                 case SyncInventory:
                 case SetInventory:
@@ -77,11 +85,11 @@ namespace PeakSentinel.Detection
                     return CheckFromOwner(sender, owner, $"forced an item into the hands ({method}) of");
 
                 case Clone:
-                    _report.Flag(sender, $"cloned an item ({ItemNameOf(view)})");
+                    _report.Suspect(sender, FindingCategory.Items, $"cloned an item ({ItemNameOf(view)})");
                     return true;
 
                 default:
-                    return true;
+                    return _kicks.Allow(method, sender, view) && (_harm.Inspect(method, sender, owner, arguments) & _world.Inspect(method, sender, view, arguments));
             }
         }
 
@@ -92,13 +100,13 @@ namespace PeakSentinel.Detection
 
             if (IsGrappleStartItem(item))
             {
-                _report.Notice(sender, $"got the grapple mode start item '{item}'");
+                _report.Notice(sender, FindingCategory.Items, $"got the grapple mode start item '{item}'");
                 return true;
             }
 
             if (IsAirportPassport(view, item))
             {
-                _report.Notice(sender, $"got the airport '{item}'");
+                _report.Notice(sender, FindingCategory.Items, $"got the airport '{item}'");
                 return true;
             }
 
@@ -129,7 +137,7 @@ namespace PeakSentinel.Detection
         private bool Refuse(PhotonPlayer sender, string action, bool mine)
         {
             bool block = _protection.BlockCheatSpawns.Value && PhotonNetwork.IsMasterClient && !(mine && _protection.AllowMySpawns.Value);
-            _report.Flag(sender, action, block);
+            _report.Flag(sender, FindingCategory.Items, action, block);
             return !block;
         }
 
