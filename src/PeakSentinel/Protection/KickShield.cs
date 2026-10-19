@@ -50,7 +50,7 @@ namespace PeakSentinel.Protection
 
         private bool ShieldMe(RpcCall call)
         {
-            if (!_settings.IgnoreKicks.Value)
+            if (!_settings.IgnoreKicks.Value || (_settings.AllowHonestKicks.Value && IsKickMode()))
                 return true;
 
             if (call.Method == RpcNames.Fall)
@@ -80,7 +80,7 @@ namespace PeakSentinel.Protection
         private bool ShieldsEveryone()
         {
             bool enabled = _settings.IgnoreKicks.Value && _settings.ShieldEveryoneFromKicks.Value && (PhotonNetwork.IsMasterClient || _settings.ShieldEveryoneFromKicksAsClient.Value);
-            return enabled && !IsKickMode();
+            return enabled && (!IsKickMode() || _settings.ShieldEveryoneInKickMode.Value);
         }
 
         private bool IsKickMode()

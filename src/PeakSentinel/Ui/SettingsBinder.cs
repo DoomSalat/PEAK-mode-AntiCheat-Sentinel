@@ -40,6 +40,16 @@ namespace PeakSentinel.Ui
             return toggle;
         }
 
+        public Toggle BindPair(Transform parent, string label, ConfigEntry<bool> main, string secondLabel, ConfigEntry<bool> second, float secondWidth)
+        {
+            RectTransform row = _ui.Row(parent, 10f);
+            _ui.Flexible(Bind(row, label, main), 1f, 0f);
+            Toggle secondToggle = Bind(row, secondLabel, second);
+            _ui.Fixed(secondToggle, secondWidth, 0f);
+            Depend(secondToggle, () => main.Value);
+            return secondToggle;
+        }
+
         public void Depend(Toggle toggle, Func<bool> enabled)
         {
             _dependents.Add((toggle, toggle.GetComponent<CanvasGroup>(), enabled));

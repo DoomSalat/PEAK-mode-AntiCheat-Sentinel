@@ -168,7 +168,8 @@ namespace PeakSentinel.Detection.Flight
 
         private float GroundDistance(Character character)
         {
-            return Physics.Raycast(character.Center, Vector3.down, out RaycastHit hit, MaxProbe, _terrainMask) ? hit.distance : MaxProbe;
+            float radius = _settings.GroundProbeRadius.Value;
+            return Physics.SphereCast(character.Center, radius, Vector3.down, out RaycastHit hit, MaxProbe, _terrainMask) ? hit.distance + radius : MaxProbe;
         }
     }
 }

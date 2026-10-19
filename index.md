@@ -34,7 +34,7 @@ SentinelPlugin                          — composition root: настройки
 |---|---|---|
 | SentinelPlugin | SentinelPlugin.cs | Создаёт настройки, отчёт, BanList, связывает RpcRouter со всеми аудитами, вешает MonoBehaviour на скрытый DontDestroyOnLoad-объект, Harmony PatchAll |
 | SentinelWindow | Ui/SentinelWindow.cs | Окно F6: клавиша открытия (или захват новой клавиши через HotkeyButton), Canvas строится при первом открытии и заново при смене шрифта, свой EventSystem если в сцене нет, вкладки, обновление открытой вкладки 4 раза в секунду; `IsOpen` читает патч курсора |
-| FlightAudit | Detection/Flight/FlightAudit.cs | 10 раз в секунду по каждому чужому персонажу: высота (свой луч по TerrainMap), вертикальная скорость по позициям, горизонтальная скорость; находки и откат «Snap back» |
+| FlightAudit | Detection/Flight/FlightAudit.cs | 10 раз в секунду по каждому чужому персонажу: высота (своя сфера радиусом GroundProbeRadius вниз по TerrainMap — тонкий луч промахивался мимо уступа, когда игрок стоял краем ступни), вертикальная скорость по позициям, горизонтальная скорость; находки и откат «Snap back» |
 | StaminaAudit | Detection/Stamina/StaminaAudit.cs | 4 раза в секунду по каждому чужому персонажу: стамина (обычная + бонусная) из CharacterSyncer, пока игрок лезет (стена, верёвка, лиана) или бежит (isSprinting, на земле, быстрее MinSprintSpeed); если за усилие стамина не опустилась ниже минимума на MinDrop дольше FlagSeconds — подозрение «stamina does not go down», метка «infinite stamina», раз за усилие; не проверяется: мёртв/без сознания, аэропорт, эффекты InfiniteStamina/FasterBoi, стамина пуста; блокировать нельзя — стамина считается на клиенте игрока; строки STAMINA в PeakSentinel.log |
 | CheatModScan | Detection/CheatModScan.cs | Раз в 5 с: свойства игроков CherryUser/CherryOwner/AtlUser/AtlOwner, хост кикает при KickCheatModUsers |
 | BanGuard | Protection/BanGuard.cs | Раз в секунду у хоста кикает игроков из BanList; `Ban(player)` |
@@ -62,7 +62,7 @@ SentinelPlugin                          — composition root: настройки
 | Class | File | Role |
 |---|---|---|
 | HandGuard | Protection/HandGuard.cs | Не хост: свои RequestPickup / RPC_RequestFakeItemPickup / RPC_SpawnItemInHandMaster запоминаются на 5 с (патч PhotonView.RPC); OnPickupAccepted без такого запроса — не брать в руку и очистить слот (RefuseForcedPickups) |
-| KickShield | Protection/KickShield.cs | RPCA_Kick запоминает пинающего на 2 с; его RPCA_Fall / RPCA_AddForceAtPosition по тебе отменяются (IgnoreKicks); при выключенных пинках в забеге каждый пинок — находка, а при защите всех упавшему шлётся RPCA_UnFall |
+| KickShield | Protection/KickShield.cs | RPCA_Kick запоминает пинающего на 2 с; его RPCA_Fall / RPCA_AddForceAtPosition по тебе отменяются (IgnoreKicks; с AllowHonestKicks — только при выключенных пинках в забеге); при выключенных пинках в забеге каждый пинок — находка; при защите всех упавшему шлётся RPCA_UnFall — только при выключенных пинках, а с ShieldEveryoneInKickMode и при честных пинках |
 | BanList | Protection/BanList.cs | Файл `BepInEx/config/PeakSentinel.bans.txt`, строка «UserId\tник» |
 
 ### Reporting
@@ -79,7 +79,7 @@ SentinelPlugin                          — composition root: настройки
 |---|---|---|
 | UiFactory, UiPalette, CardSprites, FaceSprites | Ui/ | Canvas 1920×1080, элементы в стиле ItemSpawnerPremium (пергамент, скругления генерируются кодом), шрифт игры (FontFallbackSwapper.mainBaseFont), смайлики статуса |
 | HotkeyButton | Ui/HotkeyButton.cs | Кнопка «Window key: F6» в шапке: клик → «Press a key... (Esc cancels)» → любая клавиша становится [Manager] ToggleKey |
-| SettingsBinder | Ui/SettingsBinder.cs | Галочки ↔ ConfigEntry, зависимые галочки (гаснут), пометки «только у хоста» |
+| SettingsBinder | Ui/SettingsBinder.cs | Галочки ↔ ConfigEntry, пара «проверка + вторая галочка справа» (BindPair), зависимые галочки (гаснут), пометки «только у хоста» |
 | FeedOptions / FeedFilter / FindingFeed | Ui/ | Show notices, Follow newest, поиск (общий для вкладок), Clear; лента кусками по 40 строк (лимит вершин TMP), цвет по виду находки, тексты в `<noparse>` |
 | PlayerListView, AvatarCache | Ui/ | Строки игроков (аватарка Steam, смайлик и цвет статуса, Kick/Ban с подтверждением), профиль с лентой игрока |
 | Pages: LogPage, ItemsPage, CheatsPage, OtherPage, PlayersPage, BansPage | Ui/Pages/ | Вкладки окна (ITabPage), общий PageContext, FeedSection = опции + лента |
@@ -90,9 +90,9 @@ SentinelPlugin                          — composition root: настройки
 | ManagerSettings | [Manager] | ToggleKey (F6), MaxLogEntries (500, 50–5000) |
 | ProtectionSettings | [Protection] | BlockCheatSpawns, AllowMySpawns, RefuseForcedPickups (все вкл.) |
 | DetectionSettings | [Cheat detection] | HarmToOthers + BlockHarmToOthers, HostOnlyEvents + BlockHostOnlyEvents, DangerousSpawns + BlockDangerousSpawns, Flight + BlockFlight (выкл.), Stamina, SourcelessEffects (оба без блока), CheatModMarkers + KickCheatModUsers |
-| OtherSettings | [Other] | IgnoreKicks → ShieldEveryoneFromKicks → ShieldEveryoneFromKicksAsClient (цепочка, все выкл.) |
+| OtherSettings | [Other] | IgnoreKicks (+ AllowHonestKicks: сама выключается при включённых пинках в забеге) → ShieldEveryoneFromKicks → ShieldEveryoneInKickMode / ShieldEveryoneFromKicksAsClient (цепочка, все выкл.) |
 | StaminaSettings | [Stamina] | FlagSeconds 4, MinDrop 0.02, MinSprintSpeed 3, TraceSamples |
-| FlightSettings | [Flight] | MinGroundDistance, WindowSeconds, MaxGravityDrop, FastFallSpeed, FlagSeconds, MaxRunSpeed, SpeedWindowSeconds, SpeedFlagSeconds, TraceSamples |
+| FlightSettings | [Flight] | MinGroundDistance, GroundProbeRadius (0.5), WindowSeconds, MaxGravityDrop, FastFallSpeed, FlagSeconds, MaxRunSpeed, SpeedWindowSeconds, SpeedFlagSeconds, TraceSamples |
 | DebugSettings | [Debug] | TraceFile, TraceAllRpcs |
 
 ## Data Flow
