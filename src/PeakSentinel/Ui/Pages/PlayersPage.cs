@@ -7,10 +7,10 @@ namespace PeakSentinel.Ui.Pages
     {
         private readonly PlayerListView _players;
 
-        public PlayersPage(PageContext context, Transform page, BanGuard banGuard, AvatarCache avatars)
+        public PlayersPage(PageContext context, Transform page, BanGuard banGuard, AvatarCache avatars, MuteList mutes)
         {
             context.Binder.HostNote(page);
-            _players = new PlayerListView(context.Ui, page, context.Findings, context.Filter, banGuard, avatars, context.Fix);
+            _players = new PlayerListView(context.Ui, page, context.Findings, context.Filter, banGuard, avatars, mutes, context.Fix);
         }
 
         public void Refresh()

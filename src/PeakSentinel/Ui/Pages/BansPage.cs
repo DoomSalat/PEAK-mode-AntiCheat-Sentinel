@@ -16,10 +16,16 @@ namespace PeakSentinel.Ui.Pages
         private const string BannedHeader = "Banned players (kicked on join while you host)";
         private const string NoBans = "nobody is banned";
         private const string UnbanLabel = "Unban";
+        private const float ShareWidth = 260f;
+        private const string CopyLabel = "Copy list";
+        private const string PasteLabel = "Add from clipboard";
+        private const string CopiedFormat = "Copied {0} bans to the clipboard: send them to a friend, they press 'Add from clipboard'";
+        private const string AddedFormat = "Added {0} new bans from the clipboard";
 
         private readonly UiFactory _ui;
         private readonly BanList _bans;
         private readonly TextMeshProUGUI _header;
+        private readonly TextMeshProUGUI _shareResult;
         private readonly RectTransform _rows;
         private string _shown;
 
@@ -27,7 +33,13 @@ namespace PeakSentinel.Ui.Pages
         {
             _ui = ui;
             _bans = bans;
-            _header = ui.Label(parent, string.Empty, HeaderSize, UiPalette.Text, false);
+            RectTransform top = ui.Row(parent, 10f);
+            _header = ui.Label(top, string.Empty, HeaderSize, UiPalette.Text, false);
+            ui.Flexible(_header, 1f, 0f);
+            ui.Button(top, CopyLabel, ShareWidth, LineSize, CopyList);
+            ui.Button(top, PasteLabel, ShareWidth, LineSize, AddFromClipboard);
+            _shareResult = ui.Label(parent, string.Empty, LineSize, UiPalette.Clean, false);
+            _shareResult.gameObject.SetActive(false);
             (ScrollRect _, RectTransform rows) = ui.Scroll(parent, 6f);
             _rows = rows;
         }
@@ -58,6 +70,25 @@ namespace PeakSentinel.Ui.Pages
             TextMeshProUGUI label = _ui.Label(row, $"{name}   ({userId})", LineSize, UiPalette.Cheat, false);
             _ui.Flexible(label, 1f, 0f);
             _ui.Button(row, UnbanLabel, UnbanWidth, LineSize, () => Unban(userId));
+        }
+
+        private void CopyList()
+        {
+            GUIUtility.systemCopyBuffer = _bans.Export();
+            ShowResult(string.Format(CopiedFormat, _bans.Count));
+        }
+
+        private void AddFromClipboard()
+        {
+            ShowResult(string.Format(AddedFormat, _bans.Import(GUIUtility.systemCopyBuffer)));
+            _shown = null;
+            Refresh();
+        }
+
+        private void ShowResult(string text)
+        {
+            _shareResult.text = text;
+            _shareResult.gameObject.SetActive(true);
         }
 
         private void Unban(string userId)

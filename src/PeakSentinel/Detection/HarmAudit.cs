@@ -15,6 +15,8 @@ namespace PeakSentinel.Detection
         private const string CursesTag = "zombifies or petrifies other players";
         private const string TeleportsTag = "teleports other players";
         private const string FlingsTag = "flings other players";
+        private const string InfinityTag = "warps players to infinity";
+        private const float MaxWorldCoordinate = 100000f;
 
         private static readonly HashSet<string> Methods = new HashSet<string> // Static: fixed set of RPC names that can harm another player
         {
@@ -37,6 +39,9 @@ namespace PeakSentinel.Detection
 
         public bool Inspect(RpcCall call)
         {
+            if (call.Method == RpcNames.Warp && call.Sender != null && !call.FromLocal && call.Argument(0) is Vector3 target && !IsSane(target))
+                return _report.Refuse(call.Sender, FindingCategory.Cheats, InfinityTag, $"warped {PlayerNames.Name(call.Owner)} to an invalid position {target} (black screen), always blocked", true);
+
             if (!_detection.HarmToOthers.Value || call.Sender == null || call.Owner == null || call.FromOwner || call.FromHost || call.FromLocal)
                 return true;
 
@@ -67,6 +72,11 @@ namespace PeakSentinel.Detection
                 default:
                     return CheckFling(call, victim, Mathf.Max(call.MagnitudeAt(1), call.MagnitudeAt(2)), character);
             }
+        }
+
+        private bool IsSane(Vector3 position)
+        {
+            return !float.IsNaN(position.x) && !float.IsNaN(position.y) && !float.IsNaN(position.z) && Mathf.Abs(position.x) < MaxWorldCoordinate && Mathf.Abs(position.y) < MaxWorldCoordinate && Mathf.Abs(position.z) < MaxWorldCoordinate;
         }
 
         private bool CheckFling(RpcCall call, string victim, float force, Character character)

@@ -32,6 +32,18 @@ namespace PeakSentinel.Network
         public const string ExtinguishCampfire = "Extinguish_Rpc";
         public const string StartFog = "StartMovingRPC";
         public const string SyncFog = "RPCA_SyncFog";
+        public const string Jump = "JumpRpc";
+        public const string Crouch = "RPCA_SetCrouch";
+        public const string StopClimbing = "StopClimbingRpc";
+        public const string StopRopeClimbing = "StopRopeClimbingRpc";
+        public const string DropFromSlot = "DropItemFromSlotRPC";
+        public const string Emote = "RPCA_PlayRemove";
+        public const string ShownDead = "CharacterDied";
+        public const string ShownPassedOut = "CharacterPassedOut";
+        public const string SyncStatuses = "SyncStatusesRPC";
+        public const string ApplyStatuses = "RPC_ApplyStatusesFromFloatArray";
+        public const string LightFlare = "SetFlareLitRPC";
+        public const string Build = "CreatePrefabRPC";
         public const string SyncAfflictions = "SyncAfflictionsRPC";
     }
 }

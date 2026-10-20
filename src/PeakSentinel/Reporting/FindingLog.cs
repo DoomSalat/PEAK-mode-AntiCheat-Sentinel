@@ -10,6 +10,8 @@ namespace PeakSentinel.Reporting
     public sealed class FindingLog
     {
         private const string Separator = ", ";
+        private const int RepeatLookback = 20;
+        private const double RepeatSeconds = 30;
 
         private readonly List<Finding> _findings = new List<Finding>();
         private readonly Dictionary<int, PlayerRecord> _players = new Dictionary<int, PlayerRecord>();
@@ -27,10 +29,19 @@ namespace PeakSentinel.Reporting
 
         public void Add(int actor, string name, string text, FindingKind kind, FindingCategory category, Repair repair = null)
         {
-            _findings.Add(new Finding(DateTime.Now, actor, name, text, kind, category, repair));
-            Version++;
+            Finding repeated = repair == null ? RepeatOf(actor, text, kind, category) : null;
 
-            Trim();
+            if (repeated != null)
+            {
+                repeated.Repeat(DateTime.Now);
+            }
+            else
+            {
+                _findings.Add(new Finding(DateTime.Now, actor, name, text, kind, category, repair));
+                Trim();
+            }
+
+            Version++;
 
             PlayerRecord record = RecordOf(actor);
 
@@ -101,6 +112,21 @@ namespace PeakSentinel.Reporting
             return record.Suspicious > 0 || record.Tags.Count > 0 ? PlayerStanding.Suspect : PlayerStanding.Clean;
         }
 
+        private Finding RepeatOf(int actor, string text, FindingKind kind, FindingCategory category)
+        {
+            DateTime now = DateTime.Now;
+
+            for (int i = _findings.Count - 1; i >= 0 && i >= _findings.Count - RepeatLookback; i--)
+            {
+                Finding finding = _findings[i];
+
+                if (finding.Repair == null && finding.Actor == actor && finding.Kind == kind && finding.Category == category && finding.Text == text && (now - finding.LastSeen).TotalSeconds <= RepeatSeconds)
+                    return finding;
+            }
+
+            return null;
+        }
+
         private void Trim()
         {
             int excess = _findings.Count - _capacity.Value;
@@ -139,6 +165,8 @@ namespace PeakSentinel.Reporting
                 Text = text;
                 Kind = kind;
                 Category = category;
+                LastSeen = time;
+                Repeats = 1;
             }
 
             public DateTime Time { get; }
@@ -149,6 +177,14 @@ namespace PeakSentinel.Reporting
             public FindingCategory Category { get; }
             public Repair Repair { get; }
             public bool Fixed { get; set; } // Set: FindingLog.MarkFixed after the repair was sent
+            public int Repeats { get; private set; }
+            public DateTime LastSeen { get; private set; }
+
+            public void Repeat(DateTime time)
+            {
+                Repeats++;
+                LastSeen = time;
+            }
         }
 
         private sealed class PlayerRecord

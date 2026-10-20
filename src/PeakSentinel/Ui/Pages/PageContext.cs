@@ -6,8 +6,9 @@ namespace PeakSentinel.Ui.Pages
 {
     public sealed class PageContext
     {
-        public PageContext(UiFactory ui, SettingsBinder binder, FeedFilter filter, FindingLog findings, UnityAction refresh, Action<FindingLog.Finding> fix)
+        public PageContext(UiFactory ui, SettingsBinder binder, FeedFilter filter, FindingLog findings, UnityAction refresh, Action<FindingLog.Finding> fix, Func<string> export)
         {
+            Export = export;
             Fix = fix;
             Ui = ui;
             Binder = binder;
@@ -22,5 +23,6 @@ namespace PeakSentinel.Ui.Pages
         public FindingLog Findings { get; }
         public UnityAction Refresh { get; }
         public Action<FindingLog.Finding> Fix { get; }
+        public Func<string> Export { get; }
     }
 }

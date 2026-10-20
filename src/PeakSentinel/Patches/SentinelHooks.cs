@@ -11,7 +11,9 @@ namespace PeakSentinel.Patches
     {
         public static SuspicionReport Report { get; set; } // Set: assigned once by SentinelPlugin
         public static FindingLog Findings { get; set; } // Set: assigned once by SentinelPlugin, read by the pause menu badges
+        public static MuteList Mutes { get; set; } // Set: assigned once by SentinelPlugin, read by the pause menu badges
         public static RpcRouter Router { get; set; } // Set: assigned once by SentinelPlugin
+        public static PacketGate Gate { get; set; } // Set: assigned once by SentinelPlugin, sees every incoming Photon event first
         public static InstantiateAudit Instantiate { get; set; } // Set: assigned once by SentinelPlugin
         public static HandGuard Hands { get; set; } // Set: assigned once by SentinelPlugin, told about own outgoing pickup requests
         public static EnvironmentMarks Environment { get; set; } // Set: assigned once by SentinelPlugin, filled by the environment patches

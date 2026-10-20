@@ -1,12 +1,14 @@
 using DG.Tweening;
+using PeakSentinel.Protection;
 using PeakSentinel.Reporting;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using PhotonPlayer = Photon.Realtime.Player;
 
 namespace PeakSentinel.Ui
 {
-    public sealed class StandingBadge : MonoBehaviour
+    public sealed class AvatarBadge : MonoBehaviour
     {
         private const float MarkSize = 40f;
         private const float FontSize = 38f;
@@ -14,24 +16,37 @@ namespace PeakSentinel.Ui
         private const float PulseSeconds = 0.45f;
         private const string SuspectMark = "?";
         private const string CheaterMark = "!";
+        private const string MutedMark = "X";
+        private const float CrossSize = 80f;
+
+        private static readonly Color MutedTint = new Color(0.4f, 0.4f, 0.4f, 1f); // Static: fixed grey for muted avatars
+        private static readonly Color CrossColor = new Color(0.12f, 0.1f, 0.08f, 0.9f); // Static: fixed colour of the mute cross
 
         private RectTransform _avatar;
         private RectTransform _frame;
+        private Image _avatarImage;
         private TextMeshProUGUI _mark;
+        private TextMeshProUGUI _cross;
+        private MuteList _mutes;
+        private PhotonPlayer _player;
+        private bool _shownMuted;
         private Tween _pulse;
         private FindingLog _findings;
         private int _actor;
         private PlayerStanding _shown = PlayerStanding.Clean;
 
-        public void Initialize(Image avatar, int actor, FindingLog findings)
+        public void Initialize(Image avatar, PhotonPlayer player, FindingLog findings, MuteList mutes)
         {
-            _actor = actor;
+            _player = player;
+            _actor = player.ActorNumber;
             _findings = findings;
+            _mutes = mutes;
 
             if (_mark == null)
                 Build(avatar);
 
             Show(_findings.StandingOf(_actor));
+            ShowMuted(_mutes.IsMuted(_player));
         }
 
         private void Update()
@@ -48,6 +63,11 @@ namespace PeakSentinel.Ui
 
             if (standing != _shown)
                 Show(standing);
+
+            bool muted = _mutes.IsMuted(_player);
+
+            if (muted != _shownMuted)
+                ShowMuted(muted);
         }
 
         private void OnDestroy()
@@ -57,8 +77,9 @@ namespace PeakSentinel.Ui
 
         private void Build(Image avatar)
         {
+            _avatarImage = avatar;
             _avatar = avatar.rectTransform;
-            _frame = new GameObject(nameof(StandingBadge), typeof(RectTransform)).GetComponent<RectTransform>();
+            _frame = new GameObject(nameof(AvatarBadge), typeof(RectTransform)).GetComponent<RectTransform>();
             _frame.SetParent(_avatar, false);
             _frame.anchorMin = Vector2.zero;
             _frame.anchorMax = Vector2.one;
@@ -66,7 +87,7 @@ namespace PeakSentinel.Ui
             _frame.offsetMin = Vector2.zero;
             _frame.offsetMax = Vector2.zero;
 
-            RectTransform holder = new GameObject(nameof(StandingBadge), typeof(RectTransform)).GetComponent<RectTransform>();
+            RectTransform holder = new GameObject(nameof(AvatarBadge), typeof(RectTransform)).GetComponent<RectTransform>();
             holder.SetParent(_frame, false);
             holder.anchorMin = Vector2.one;
             holder.anchorMax = Vector2.one;
@@ -74,6 +95,22 @@ namespace PeakSentinel.Ui
             holder.sizeDelta = new Vector2(MarkSize, MarkSize);
             holder.anchoredPosition = Vector2.zero;
             _mark = Glyph(holder);
+            _cross = Glyph(_frame);
+            _cross.fontSize = CrossSize;
+            _cross.color = CrossColor;
+            _cross.text = MutedMark;
+            _cross.transform.SetAsFirstSibling();
+        }
+
+        private void ShowMuted(bool muted)
+        {
+            _shownMuted = muted;
+            _avatarImage.color = muted ? MutedTint : Color.white;
+
+            if (muted)
+                _cross.gameObject.SetActive(true);
+            else
+                _cross.gameObject.SetActive(false);
         }
 
         private TextMeshProUGUI Glyph(RectTransform holder)

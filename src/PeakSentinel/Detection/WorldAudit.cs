@@ -122,6 +122,7 @@ namespace PeakSentinel.Detection
             Add(rules, "DisperseRPC", typeof(BeeSwarm), Sender.Host, "dispersed a bee swarm");
             Add(rules, "SetBeesAngryRPC", typeof(BeeSwarm), Sender.Host, "changed a bee swarm's anger");
             Add(rules, RpcNames.TriggerHelicopter, typeof(Flare), Sender.Host, "triggered the rescue helicopter");
+            Add(rules, RpcNames.LightFlare, typeof(Flare), Sender.Owner, "lit the flare of", true);
             Add(rules, RpcNames.ExtinguishCampfire, typeof(Campfire), Sender.Host, "tried to extinguish a campfire");
             Add(rules, "RPCEndGame", typeof(Character), Sender.Host, "forced the game to end");
             Add(rules, "RPCEndGame_ForceWin", typeof(Character), Sender.Host, "forced a win");

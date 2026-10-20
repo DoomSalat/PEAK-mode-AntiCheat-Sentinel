@@ -1,4 +1,4 @@
-﻿namespace PeakSentinel.Reporting
+namespace PeakSentinel.Reporting
 {
     public enum PlayerStanding
     {

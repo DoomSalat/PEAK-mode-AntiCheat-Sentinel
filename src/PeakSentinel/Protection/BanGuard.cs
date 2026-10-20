@@ -11,8 +11,9 @@ namespace PeakSentinel.Protection
     {
         private const float ScanSeconds = 1f;
         private const string BannedTag = "banned";
+        private const float RetrySeconds = 5f;
 
-        private readonly HashSet<int> _kicked = new HashSet<int>();
+        private readonly Dictionary<int, float> _kicked = new Dictionary<int, float>();
         private SuspicionReport _report;
         private BanList _bans;
         private float _nextScan;
@@ -38,8 +39,13 @@ namespace PeakSentinel.Protection
 
             foreach (PhotonPlayer player in PhotonNetwork.PlayerList)
             {
-                if (!player.IsLocal && _bans.Contains(player.UserId) && _kicked.Add(player.ActorNumber))
+                if (player.IsLocal || !_bans.Contains(player.UserId))
+                    continue;
+
+                if (!_kicked.TryGetValue(player.ActorNumber, out float kickedAt))
                     Remove(player);
+                else if (Time.unscaledTime - kickedAt >= RetrySeconds)
+                    Kick(player);
             }
         }
 
@@ -48,7 +54,6 @@ namespace PeakSentinel.Protection
             _bans.Ban(player.UserId, PlayerNames.Name(player));
             _report.Tag(player, BannedTag);
             _report.Flag(player, FindingCategory.Cheats, "was banned by you", true);
-            _kicked.Add(player.ActorNumber);
             Kick(player);
         }
 
@@ -61,6 +66,8 @@ namespace PeakSentinel.Protection
 
         private void Kick(PhotonPlayer player)
         {
+            _kicked[player.ActorNumber] = Time.unscaledTime;
+
             if (PlayerHandler.TryGetPlayer(player.ActorNumber, out _))
                 PlayerHandler.Kick(player.ActorNumber);
             else

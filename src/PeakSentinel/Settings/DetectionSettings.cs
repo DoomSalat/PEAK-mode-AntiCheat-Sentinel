@@ -18,6 +18,17 @@ namespace PeakSentinel.Settings
             BlockFlight = config.Bind(Section, "BlockFlight", false, "As host, teleport a detected flyer back to where they last stood and knock them down for a moment. Off by default until the thresholds are tuned: a false detection would snap an honest player back too.");
             Stamina = config.Bind(Section, "Stamina", true, "Report a player whose stamina, as their client sends it, does not go down while they sprint or climb (infinite stamina cheats). Thresholds are in the [Stamina] section. Cannot be blocked: stamina lives on their client.");
             SourcelessEffects = config.Bind(Section, "SourcelessEffects", true, "Report a player who gets protection or infinite stamina (Invincibility, golden Bing Bong shield, InfiniteStamina) without a source: nothing eaten just before and no golden Bing Bong in hand. Cannot be blocked: effects live on their client.");
+            ForcedActions = config.Bind(Section, "ForcedActions", true, "Report a player who makes another player jump, crouch, let go of a wall or rope, drop items, emote, look dead or change statuses.");
+            BlockForcedActions = config.Bind(Section, "BlockForcedActions", true, "Ignore such commands on your side.");
+            ObjectDestroy = config.Bind(Section, "ObjectDestroy", true, "Report a player who destroys an object that belongs to another player.");
+            BlockObjectDestroy = config.Bind(Section, "BlockObjectDestroy", true, "Ignore such destroys on your side.");
+            NameSpoofing = config.Bind(Section, "NameSpoofing", true, "Report a player whose in-game name differs from their Steam name, who renames mid-game, or who uses another player's Steam ID.");
+            BuildSpam = config.Bind(Section, "BuildSpam", true, "Report a player who builds with someone else's item or builds more than the [Flood] limit (flag spam).");
+            BlockBuildSpam = config.Bind(Section, "BlockBuildSpam", true, "Ignore such builds on your side.");
+            Flood = config.Bind(Section, "Flood", true, "Report a player who sends more commands or spawns per second than the [Flood] limits (lag and crash cheats).");
+            MuteFlooders = config.Bind(Section, "MuteFlooders", true, "Mute a flooder for this session on your side: everything they send is ignored except voice.");
+            CharacterTakeover = config.Bind(Section, "CharacterTakeover", true, "Report a player who tries to take control of another player's character (ownership request or transfer).");
+            BlockCharacterTakeover = config.Bind(Section, "BlockCharacterTakeover", true, "Ignore such takeovers on your side.");
             CheatModMarkers = config.Bind(Section, "CheatModMarkers", true, "Report players marked by the Cherry or Atlas cheat mods (same check as PEAKER).");
             KickCheatModUsers = config.Bind(Section, "KickCheatModUsers", true, "As host, kick players marked by the Cherry or Atlas cheat mods.");
         }
@@ -32,6 +43,17 @@ namespace PeakSentinel.Settings
         public ConfigEntry<bool> BlockFlight { get; }
         public ConfigEntry<bool> Stamina { get; }
         public ConfigEntry<bool> SourcelessEffects { get; }
+        public ConfigEntry<bool> ForcedActions { get; }
+        public ConfigEntry<bool> BlockForcedActions { get; }
+        public ConfigEntry<bool> ObjectDestroy { get; }
+        public ConfigEntry<bool> BlockObjectDestroy { get; }
+        public ConfigEntry<bool> NameSpoofing { get; }
+        public ConfigEntry<bool> BuildSpam { get; }
+        public ConfigEntry<bool> BlockBuildSpam { get; }
+        public ConfigEntry<bool> Flood { get; }
+        public ConfigEntry<bool> MuteFlooders { get; }
+        public ConfigEntry<bool> CharacterTakeover { get; }
+        public ConfigEntry<bool> BlockCharacterTakeover { get; }
         public ConfigEntry<bool> CheatModMarkers { get; }
         public ConfigEntry<bool> KickCheatModUsers { get; }
     }

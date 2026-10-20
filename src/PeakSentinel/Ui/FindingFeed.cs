@@ -22,6 +22,7 @@ namespace PeakSentinel.Ui
         private const string FixLabel = "Fix";
         private const string ConfirmFixLabel = "Not host! Fix?";
         private const string FixedLabel = "Fixed";
+        private const string RepeatsFormat = "  ×{0} (last {1})";
 
         private static readonly Regex NoParse = new Regex(NoParseTag, RegexOptions.IgnoreCase | RegexOptions.Compiled); // Static: one compiled pattern for every feed
 
@@ -135,7 +136,8 @@ namespace PeakSentinel.Ui
         private string LineOf(FindingLog.Finding finding)
         {
             string who = Actor == 0 ? $"{finding.Name}: " : string.Empty;
-            return RichText.Paint($"[{finding.Time.ToString(TimeFormat)}] <noparse>{NoParse.Replace(who + finding.Text, string.Empty)}</noparse>", ColorOf(finding.Kind));
+            string repeats = finding.Repeats > 1 ? string.Format(RepeatsFormat, finding.Repeats, finding.LastSeen.ToString(TimeFormat)) : string.Empty;
+            return RichText.Paint($"[{finding.Time.ToString(TimeFormat)}] <noparse>{NoParse.Replace(who + finding.Text, string.Empty)}</noparse>{repeats}", ColorOf(finding.Kind));
         }
 
         private bool Matches(FindingLog.Finding finding, string search)

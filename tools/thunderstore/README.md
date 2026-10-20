@@ -18,6 +18,12 @@ Peak Sentinel watches the network. Every command in PEAK carries the name of the
 | **Cherry and Atlas cheat users** | Logged, and kicked if you want | **everyone**, while you are the host |
 | **Flying, speed hacks** | Logged; the host can snap the flyer back to the ground | **everyone**, while you are the host (it is a guess) |
 | **Infinite stamina, godmode effects without a source** | Logged | log only (it is a guess) |
+| **Warps to infinity** (black-screen cheat) | Always refused | you |
+| **Forcing another player** to jump, crouch, let go, drop items, emote or show fake statuses | Logged; with Block nothing happens on your side | you |
+| **Destroying other players' objects**, building with their items, flag spam | Logged; with Block it does not happen on your side | you |
+| **Name and Steam ID spoofing**, renaming mid-game | Logged | log only |
+| **Network floods** (lag and crash cheats) | Logged, and the flooder is muted for you | you |
+| **Taking over another player's character** | Logged and ignored | you |
 | **Vanilla kicks** | Optional: ignore them, or stand kicked players back up | you, or everyone |
 | **Kick and Ban** | Ban is permanent: a banned player is kicked from every lobby you host | **everyone**, while you are the host |
 
@@ -27,8 +33,9 @@ Every setting in the window tells you in plain words what happens if you turn it
 
 - **Log, Items, Cheats, Other** — findings with search, colours (orange — a guess, red — a cheat or a block) and the switches.
 - **Fix** — next to findings that can be undone: revive a killed player, wake a knocked-out one, return a teleported one, relight a campfire, put the fog back.
-- **Players** — every player with their Steam avatar, a status face and what they did; Kick and Ban.
-- **Bans** — your permanent ban list with Unban.
+- **Players** — every player with their Steam avatar, a status face and what they did. **Mute** (for anyone): everything that player sends is ignored on your side for the session, voice included — to you they freeze, go silent and can do nothing, even if they rejoin. In the Esc menu their avatar turns grey and crossed out. Kick and Ban for the host.
+- **Bans** — your permanent ban list with Unban; copy it to the clipboard and share it with friends.
+- **Export** — save the whole session report to a file.
 - The window key can be changed with the button in the window header.
 
 In the **Esc menu** a player gets an orange **?** if they behaved strangely and a pulsing red **!** if they cheated.

@@ -29,6 +29,10 @@ namespace PeakSentinel.Ui
         private const string HostLabel = " [host]";
         private const string NotInRoom = "not in a room";
         private const string LeftRoom = "left the room";
+        private const string MuteLabel = "Mute";
+        private const string UnmuteLabel = "Unmute";
+        private const string MutedNote = "   · muted";
+        private const string DroppedFormat = "   · muted, {0} packets ignored";
 
         private readonly StringBuilder _signature = new StringBuilder();
         private readonly UiFactory _ui;
@@ -36,6 +40,7 @@ namespace PeakSentinel.Ui
         private readonly FeedFilter _filter;
         private readonly BanGuard _banGuard;
         private readonly AvatarCache _avatars;
+        private readonly MuteList _mutes;
         private readonly GameObject _list;
         private readonly RectTransform _rows;
         private readonly GameObject _profile;
@@ -43,6 +48,7 @@ namespace PeakSentinel.Ui
         private readonly TextMeshProUGUI _profileName;
         private readonly Image _profileFace;
         private readonly TextMeshProUGUI _profileProblems;
+        private readonly (Button Button, TextMeshProUGUI Label) _profileMute;
         private readonly (Button Button, TextMeshProUGUI Label) _profileKick;
         private readonly (Button Button, TextMeshProUGUI Label) _profileBan;
         private readonly FindingFeed _profileFeed;
@@ -52,8 +58,9 @@ namespace PeakSentinel.Ui
         private int _kickArmedActor;
         private int _banArmedActor;
 
-        public PlayerListView(UiFactory ui, Transform parent, FindingLog findings, FeedFilter filter, BanGuard banGuard, AvatarCache avatars, Action<FindingLog.Finding> fix)
+        public PlayerListView(UiFactory ui, Transform parent, FindingLog findings, FeedFilter filter, BanGuard banGuard, AvatarCache avatars, MuteList mutes, Action<FindingLog.Finding> fix)
         {
+            _mutes = mutes;
             _avatars = avatars;
             _ui = ui;
             _findings = findings;
@@ -72,6 +79,7 @@ namespace PeakSentinel.Ui
             _profileAvatar = ui.Icon(header, ui.Sprites.Box, ProfileAvatarSize);
             _profileName = ui.Label(header, string.Empty, NameSize, UiPalette.Text, false);
             ui.Flexible(_profileName, 1f, 0f);
+            _profileMute = ui.Button(header, MuteLabel, RemovalWidth, ButtonSize, () => SwitchMute(FindPlayer(_profileActor)));
             _profileKick = ui.Button(header, KickLabel, RemovalWidth, ButtonSize, () => Kick(FindPlayer(_profileActor)));
             _profileBan = ui.Button(header, BanLabel, RemovalWidth, ButtonSize, () => Ban(FindPlayer(_profileActor)));
             RectTransform status = ui.Row(profile, 8f);
@@ -125,9 +133,15 @@ namespace PeakSentinel.Ui
             PlayerStanding standing = _findings.StandingOf(actor);
             RectTransform status = _ui.Row(text, 8f);
             _ui.Icon(status, _ui.Faces.Of(standing), FaceSize);
-            _ui.Flexible(_ui.Label(status, problems ?? NoIssues, LineSize, ColorOf(standing), false), 1f, 0f);
+            bool muted = _mutes.IsMuted(player);
+            _ui.Flexible(_ui.Label(status, (problems ?? NoIssues) + (muted ? RichText.Warning(MutedNote) : string.Empty), LineSize, ColorOf(standing), true), 1f, 0f);
 
-            if (!PhotonNetwork.IsMasterClient || player.IsLocal)
+            if (player.IsLocal || player.IsMasterClient)
+                return;
+
+            _ui.Button(row.transform, muted ? UnmuteLabel : MuteLabel, RemovalWidth, ButtonSize, () => SwitchMute(player));
+
+            if (!PhotonNetwork.IsMasterClient)
                 return;
 
             _ui.Button(row.transform, _kickArmedActor == actor ? ConfirmKickLabel : KickLabel, RemovalWidth, ButtonSize, () => Kick(player));
@@ -137,7 +151,7 @@ namespace PeakSentinel.Ui
         private string ListSignature()
         {
             _signature.Clear();
-            _signature.Append(PhotonNetwork.InRoom).Append(PhotonNetwork.IsMasterClient).Append(_findings.Version).Append('|').Append(_avatars.Version).Append('|').Append(_kickArmedActor).Append('|').Append(_banArmedActor);
+            _signature.Append(PhotonNetwork.InRoom).Append(PhotonNetwork.IsMasterClient).Append(_findings.Version).Append('|').Append(_avatars.Version).Append('|').Append(_mutes.Version).Append('|').Append(_kickArmedActor).Append('|').Append(_banArmedActor);
 
             if (!PhotonNetwork.InRoom)
                 return _signature.ToString();
@@ -154,7 +168,16 @@ namespace PeakSentinel.Ui
             bool removable = player != null && PhotonNetwork.IsMasterClient && !player.IsLocal;
             string problems = _findings.ProblemsOf(_profileActor);
             _profileName.text = $"{_profileTitle}   #{_profileActor}" + (player == null ? $" — {LeftRoom}" : string.Empty);
-            _profileProblems.text = problems ?? NoIssues;
+            bool muted = _mutes.IsMuted(player);
+            _profileProblems.richText = true;
+            _profileProblems.text = (problems ?? NoIssues) + (muted ? RichText.Warning(string.Format(DroppedFormat, _mutes.DroppedFrom(player))) : string.Empty);
+            _profileMute.Label.text = muted ? UnmuteLabel : MuteLabel;
+
+            if (player != null && !player.IsLocal && !player.IsMasterClient)
+                _profileMute.Button.gameObject.SetActive(true);
+            else
+                _profileMute.Button.gameObject.SetActive(false);
+
             PlayerStanding standing = _findings.StandingOf(_profileActor);
             _profileProblems.color = ColorOf(standing);
             _profileFace.sprite = _ui.Faces.Of(standing);
@@ -195,6 +218,19 @@ namespace PeakSentinel.Ui
             _profile.SetActive(false);
             _list.SetActive(true);
             RefreshList();
+        }
+
+        private void SwitchMute(PhotonPlayer player)
+        {
+            if (player == null)
+                return;
+
+            if (_mutes.IsMuted(player))
+                _mutes.Unmute(player);
+            else
+                _mutes.Mute(player, "by you");
+
+            Refresh();
         }
 
         private void Kick(PhotonPlayer player)

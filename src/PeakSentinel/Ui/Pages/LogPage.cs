@@ -10,10 +10,14 @@ namespace PeakSentinel.Ui.Pages
         private const float CapacityWidth = 120f;
         private const string CapacityLabel = "Keep at most";
         private const string StoredFormat = "Stored findings: {0} / {1}";
+        private const string ExportLabel = "Export";
+        private const float ExportWidth = 140f;
+        private const string SavedFormat = "Saved: {0}";
 
         private readonly PageContext _context;
         private readonly TextMeshProUGUI _stored;
         private readonly TMP_InputField _capacity;
+        private readonly TextMeshProUGUI _saved;
         private readonly FeedSection _feed;
 
         public LogPage(PageContext context, Transform page)
@@ -26,6 +30,9 @@ namespace PeakSentinel.Ui.Pages
             _capacity = context.Ui.Input(row, string.Empty, TextSize, CapacityWidth);
             _capacity.contentType = TMP_InputField.ContentType.IntegerNumber;
             _capacity.onEndEdit.AddListener(Resize);
+            context.Ui.Button(row, ExportLabel, ExportWidth, TextSize, Export);
+            _saved = context.Ui.Label(page, string.Empty, TextSize, UiPalette.Clean, false);
+            _saved.gameObject.SetActive(false);
             _feed = new FeedSection(context, page, null);
         }
 
@@ -38,6 +45,12 @@ namespace PeakSentinel.Ui.Pages
                 _capacity.SetTextWithoutNotify(findings.Capacity.ToString());
 
             _feed.Refresh();
+        }
+
+        private void Export()
+        {
+            _saved.text = string.Format(SavedFormat, _context.Export());
+            _saved.gameObject.SetActive(true);
         }
 
         private void Resize(string value)

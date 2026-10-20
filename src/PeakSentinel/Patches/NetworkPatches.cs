@@ -13,6 +13,13 @@ namespace PeakSentinel.Patches
         private const byte PrefabNameKey = 0;
 
         [HarmonyPrefix]
+        [HarmonyPatch(typeof(PhotonNetwork), nameof(PhotonNetwork.OnEvent))]
+        public static bool GateEvent(EventData photonEvent)
+        {
+            return SentinelHooks.Gate == null || SentinelHooks.Gate.Allow(photonEvent);
+        }
+
+        [HarmonyPrefix]
         [HarmonyPatch(typeof(PhotonNetwork), nameof(PhotonNetwork.ExecuteRpc))]
         public static bool InspectRpc(Hashtable rpcData, PhotonPlayer sender)
         {

@@ -19,7 +19,7 @@ namespace PeakSentinel
     {
         public const string Guid = "peaksentinel";
         public const string Name = "Peak Sentinel";
-        public const string Version = "0.2.0";
+        public const string Version = "0.2.1";
 
         private const string TraceFile = "PeakSentinel.log";
         private const string BansFile = "PeakSentinel.bans.txt";
@@ -40,21 +40,26 @@ namespace PeakSentinel
             SuspicionReport report = new SuspicionReport(Logger, _trace, findings);
             SentinelHooks.Findings = findings;
             BanList bans = new BanList(Path.Combine(Paths.ConfigPath, BansFile));
+            MuteList mutes = new MuteList(report);
+            SentinelHooks.Mutes = mutes;
+            FloodSettings flood = new FloodSettings(Config);
+            SentinelHooks.Gate = new PacketGate(report, detection, flood, mutes);
             GameObject host = new GameObject(Name) { hideFlags = HideFlags.HideAndDontSave };
             DontDestroyOnLoad(host);
             EffectAudit effects = host.AddComponent<EffectAudit>();
             effects.Initialize(report, _trace, detection);
             ReviveAudit revives = host.AddComponent<ReviveAudit>();
             revives.Initialize(report, detection);
-            WireNetwork(report, protection, detection, other, effects, revives);
+            WireNetwork(report, protection, detection, other, flood, effects, revives);
             host.AddComponent<HostGuard>().Initialize(report, other);
             BanGuard banGuard = host.AddComponent<BanGuard>();
             banGuard.Initialize(report, bans);
             host.AddComponent<CheatModScan>().Initialize(report, detection);
+            host.AddComponent<IdentityAudit>().Initialize(report, detection);
             host.AddComponent<FlightAudit>().Initialize(report, _trace, detection, new FlightSettings(Config), new FlightExemptions(new RopeLinks(), SentinelHooks.Environment));
             host.AddComponent<StaminaAudit>().Initialize(report, _trace, detection, new StaminaSettings(Config));
             SentinelWindow window = host.AddComponent<SentinelWindow>();
-            window.Initialize($"{Name} {Version}", manager, protection, detection, other, findings, report, bans, banGuard);
+            window.Initialize($"{Name} {Version}", manager, protection, detection, other, findings, report, bans, banGuard, mutes, new ReportExport(Paths.BepInExRootPath, findings));
             SentinelHooks.Window = window;
 
             _harmony = new Harmony(Guid);
@@ -68,7 +73,7 @@ namespace PeakSentinel
             _trace?.Dispose();
         }
 
-        private void WireNetwork(SuspicionReport report, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, EffectAudit effects, ReviveAudit revives)
+        private void WireNetwork(SuspicionReport report, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, FloodSettings flood, EffectAudit effects, ReviveAudit revives)
         {
             HandGuard hands = new HandGuard(report, protection);
             SentinelHooks.Report = report;
@@ -81,6 +86,8 @@ namespace PeakSentinel
                 new KickShield(report, other),
                 new HarmAudit(report, detection),
                 new WorldAudit(report, detection),
+                new ControlAudit(report, detection),
+                new BuildAudit(report, detection, flood),
                 revives,
                 effects);
         }

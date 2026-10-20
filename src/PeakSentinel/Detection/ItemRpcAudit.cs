@@ -11,6 +11,7 @@ namespace PeakSentinel.Detection
     {
         private const string PassportItem = "Passport";
         private const string UnknownItem = "unknown item";
+        private const float JoinSyncSeconds = 15f;
 
         private static readonly HashSet<string> Methods = new HashSet<string> // Static: fixed set of item RPC names
         {
@@ -20,6 +21,8 @@ namespace PeakSentinel.Detection
 
         private readonly SuspicionReport _report;
         private readonly ProtectionSettings _protection;
+        private string _room;
+        private float _joinedAt;
 
         public ItemRpcAudit(SuspicionReport report, ProtectionSettings protection)
         {
@@ -46,6 +49,8 @@ namespace PeakSentinel.Detection
                     return call.FromHost || Refuse(call.Sender, $"forced an item pickup on {PlayerNames.Name(call.Owner)}", false);
 
                 case RpcNames.SyncInventory:
+                    return CheckInventorySync(call);
+
                 case RpcNames.SetInventory:
                 case RpcNames.RemoveFromSlot:
                     return CheckFromOwner(call, $"rewrote the inventory ({call.Method}) of");
@@ -92,6 +97,27 @@ namespace PeakSentinel.Detection
                 return true;
 
             return Refuse(call.Sender, $"made {PlayerNames.Name(pickerOwner)} pick up '{ItemNameOf(call.View)}'", false);
+        }
+
+        private bool CheckInventorySync(RpcCall call)
+        {
+            if (call.FromHost || JustJoined())
+                return true;
+
+            return Refuse(call.Sender, $"sent a fake inventory of {PlayerNames.Name(call.Owner)} (only the host keeps inventories)", false);
+        }
+
+        private bool JustJoined()
+        {
+            string room = PhotonNetwork.CurrentRoom == null ? null : PhotonNetwork.CurrentRoom.Name;
+
+            if (room != _room)
+            {
+                _room = room;
+                _joinedAt = UnityEngine.Time.time;
+            }
+
+            return UnityEngine.Time.time - _joinedAt < JoinSyncSeconds;
         }
 
         private bool CheckFromOwner(RpcCall call, string action)

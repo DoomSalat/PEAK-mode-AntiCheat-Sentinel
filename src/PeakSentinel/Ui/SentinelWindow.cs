@@ -4,6 +4,7 @@ using PeakSentinel.Protection;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
 using PeakSentinel.Ui.Pages;
+using Photon.Pun;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -18,7 +19,7 @@ namespace PeakSentinel.Ui
         private const string CanvasName = "PeakSentinelCanvas";
         private const int SortingOrder = 260;
         private const float Width = 1100f;
-        private const float Height = 760f;
+        private const float Height = 900f;
         private const float TopMargin = 60f;
         private const float RefreshSeconds = 0.25f;
         private const float TitleSize = 28f;
@@ -39,6 +40,8 @@ namespace PeakSentinel.Ui
         private SuspicionReport _report;
         private BanList _bans;
         private BanGuard _banGuard;
+        private MuteList _mutes;
+        private ReportExport _export;
         private UiFactory _ui;
         private SettingsBinder _binder;
         private HotkeyButton _hotkey;
@@ -48,8 +51,10 @@ namespace PeakSentinel.Ui
 
         public bool IsOpen { get; private set; }
 
-        public void Initialize(string title, ManagerSettings manager, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, FindingLog findings, SuspicionReport report, BanList bans, BanGuard banGuard)
+        public void Initialize(string title, ManagerSettings manager, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, FindingLog findings, SuspicionReport report, BanList bans, BanGuard banGuard, MuteList mutes, ReportExport export)
         {
+            _export = export;
+            _mutes = mutes;
             _report = report;
             _title = title;
             _manager = manager;
@@ -131,12 +136,12 @@ namespace PeakSentinel.Ui
 
             RectTransform body = _ui.Column(layout, 0f, new RectOffset(0, 0, 0, 0));
             _ui.Flexible(body, 1f, 1f);
-            PageContext context = new PageContext(_ui, _binder, _filter, _findings, Refresh, Fix);
+            PageContext context = new PageContext(_ui, _binder, _filter, _findings, Refresh, Fix, ExportReport);
             AddPage(body, page => new LogPage(context, page));
             AddPage(body, page => new ItemsPage(context, page, _protection));
             AddPage(body, page => new CheatsPage(context, page, _detection));
             AddPage(body, page => new OtherPage(context, page, _other));
-            AddPage(body, page => new PlayersPage(context, page, _banGuard, _avatars));
+            AddPage(body, page => new PlayersPage(context, page, _banGuard, _avatars, _mutes));
             AddPage(body, page => new BansPage(_ui, page, _bans));
             Select(_tab);
         }
@@ -192,6 +197,11 @@ namespace PeakSentinel.Ui
             _nextRefresh = Time.unscaledTime + RefreshSeconds;
             _binder.Refresh();
             _pages[_tab].Page.Refresh();
+        }
+
+        private string ExportReport()
+        {
+            return _export.Save(PhotonNetwork.CurrentRoom == null ? "none" : PhotonNetwork.CurrentRoom.Name);
         }
 
         private void Fix(FindingLog.Finding finding)

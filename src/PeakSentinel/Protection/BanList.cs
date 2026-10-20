@@ -8,6 +8,8 @@ namespace PeakSentinel.Protection
     {
         private const char Separator = '\t';
 
+        private static readonly char[] LineBreaks = { '\r', '\n' }; // Static: fixed line separators for imported lists
+
         private readonly Dictionary<string, string> _names = new Dictionary<string, string>();
         private readonly string _file;
 
@@ -31,6 +33,32 @@ namespace PeakSentinel.Protection
             Save();
         }
 
+        public string Export()
+        {
+            return string.Join("\n", Lines());
+        }
+
+        public int Import(string text)
+        {
+            int added = 0;
+
+            foreach (string line in (text ?? string.Empty).Split(LineBreaks, System.StringSplitOptions.RemoveEmptyEntries))
+            {
+                (string userId, string name) = Parse(line.Trim());
+
+                if (userId.Length == 0 || _names.ContainsKey(userId))
+                    continue;
+
+                _names[userId] = name;
+                added++;
+            }
+
+            if (added > 0)
+                Save();
+
+            return added;
+        }
+
         public void Unban(string userId)
         {
             if (_names.Remove(userId))
@@ -44,16 +72,27 @@ namespace PeakSentinel.Protection
 
             foreach (string line in File.ReadAllLines(_file))
             {
-                string[] parts = line.Split(new[] { Separator }, 2);
+                (string userId, string name) = Parse(line);
 
-                if (parts[0].Length > 0)
-                    _names[parts[0]] = parts.Length > 1 ? parts[1] : parts[0];
+                if (userId.Length > 0)
+                    _names[userId] = name;
             }
+        }
+
+        private (string UserId, string Name) Parse(string line)
+        {
+            string[] parts = line.Split(new[] { Separator }, 2);
+            return (parts[0].Trim(), parts.Length > 1 ? parts[1].Trim() : parts[0].Trim());
+        }
+
+        private IEnumerable<string> Lines()
+        {
+            return _names.Select(entry => entry.Key + Separator + entry.Value);
         }
 
         private void Save()
         {
-            File.WriteAllLines(_file, _names.Select(entry => entry.Key + Separator + entry.Value));
+            File.WriteAllLines(_file, Lines());
         }
     }
 }

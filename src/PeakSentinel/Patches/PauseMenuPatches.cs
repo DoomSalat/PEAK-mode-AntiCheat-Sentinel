@@ -10,15 +10,15 @@ namespace PeakSentinel.Patches
     {
         [HarmonyPostfix]
         [HarmonyPatch(typeof(PlayerUI), nameof(PlayerUI.Initialize))]
-        public static void AddStandingBadge(PlayerUI __instance, PhotonPlayer player)
+        public static void AddAvatarBadge(PlayerUI __instance, PhotonPlayer player)
         {
-            if (SentinelHooks.Findings == null || player == null)
+            if (SentinelHooks.Findings == null || SentinelHooks.Mutes == null || player == null)
                 return;
 
-            if (!__instance.TryGetComponent(out StandingBadge badge))
-                badge = __instance.gameObject.AddComponent<StandingBadge>();
+            if (!__instance.TryGetComponent(out AvatarBadge badge))
+                badge = __instance.gameObject.AddComponent<AvatarBadge>();
 
-            badge.Initialize(__instance.playerAvatar, player.ActorNumber, SentinelHooks.Findings);
+            badge.Initialize(__instance.playerAvatar, player, SentinelHooks.Findings, SentinelHooks.Mutes);
         }
     }
 }
