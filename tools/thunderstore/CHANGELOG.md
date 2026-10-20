@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1
+
+- Flood counts only when a player stays over the limit 3 seconds in a row; short legit game bursts are ignored.
+- No false flood or spawn alarms when you join a room in progress.
+- Dropped backpacks and cooked food that loses its poison are no longer flagged.
+- No false flight alarm while a player is knocked down.
+
 ## 1.0.0
 
 - Catches PEAK-MX and CubeX style attacks found in their code: lone pushes and pulses, explosions (including the rocket blast on your character), petrification, time of day, run timer, ascent, lava and run settings changes, illegal carrying, teleporting yourself without a teleport item.
@@ -11,8 +18,7 @@
 - Mute: unmute catches up everything you missed (death, ghost, objects, statuses). Resync re-applies a player's latest state. Auto-mute of flooders is off by default.
 - No false alarms from artifacts and game sources: campfire, stamina and healing amulets, jump amulets, energy drink, throw-teleport item, feeding another player, the scout bugle and the Scoutmaster.
 - Works with the Piggyback mod: carrying an awake player next to you and its backpack swap are not flagged.
-- Flood counts only when a player stays over the limit 3 seconds in a row (short legit game bursts are ignored); no false flood or spawn alarms when you join a room in progress; cooked food that loses its poison and dropped backpacks are not flagged.
-- Fixes: false flight at spawn and while knocked down, half-blocked explosions, the mute cross position.
+- Fixes: false flight at spawn, half-blocked explosions, the mute cross position.
 
 ## 0.2.1
 
