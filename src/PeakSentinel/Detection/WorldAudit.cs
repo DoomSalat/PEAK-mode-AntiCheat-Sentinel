@@ -5,6 +5,7 @@ using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
 using Photon.Pun;
 using UnityEngine;
+using HarmonyLib;
 using Zorro.Core;
 
 namespace PeakSentinel.Detection
@@ -14,6 +15,7 @@ namespace PeakSentinel.Detection
         private const string WorldTag = "breaks host-only game events";
         private const int FlareLitKey = 3;
         private const float PeakCheckOffset = 10f;
+        private const string TimerActiveField = "timerActive";
 
         private static readonly Dictionary<string, Rule[]> Rules = BuildRules(); // Static: fixed table of host-only RPCs (same as PEAKER)
 
@@ -78,6 +80,16 @@ namespace PeakSentinel.Detection
                 case RpcNames.ExtinguishCampfire:
                     return Relight(call.View, call.Component<Campfire>());
 
+                case RpcNames.SyncDayTime:
+                    return RestoreDayTime(call.View, call.Component<DayNightManager>());
+
+                case RpcNames.SyncRunTime:
+                    return RestoreRunTime(call.View, call.Component<RunManager>());
+
+                case RpcNames.SyncAscent:
+                    return RestoreAscent(call.View);
+
+                case RpcNames.InitFog:
                 case RpcNames.StartFog:
                 case RpcNames.SyncFog:
                     return RestoreFog(call.View, call.Component<OrbFogHandler>());
@@ -104,6 +116,32 @@ namespace PeakSentinel.Detection
             float size = fog.currentSize;
             bool moving = fog.isMoving;
             return new Repair("put the fog back", () => view.RPC(RpcNames.SyncFog, RpcTarget.All, size, moving));
+        }
+
+        private Repair RestoreDayTime(PhotonView view, DayNightManager manager)
+        {
+            if (manager == null)
+                return null;
+
+            int day = manager.dayCount;
+            float time = manager.timeOfDay;
+            return new Repair($"put the time of day back to day {day}, {time:F1} h", () => view.RPC(RpcNames.SyncDayTime, RpcTarget.All, day, time));
+        }
+
+        private Repair RestoreRunTime(PhotonView view, RunManager manager)
+        {
+            if (manager == null)
+                return null;
+
+            float time = manager.TimeSinceRunStarted;
+            bool active = Traverse.Create(manager).Field<bool>(TimerActiveField).Value;
+            return new Repair($"put the run timer back to {time:F0} s", () => view.RPC(RpcNames.SyncRunTime, RpcTarget.All, time, active));
+        }
+
+        private Repair RestoreAscent(PhotonView view)
+        {
+            int ascent = Ascents.currentAscent;
+            return new Repair($"put the ascent back to {ascent}", () => view.RPC(RpcNames.SyncAscent, RpcTarget.All, ascent));
         }
 
         private bool IsHelicopterLegit(PhotonView view)
@@ -140,6 +178,13 @@ namespace PeakSentinel.Detection
             Add(rules, "ShakeRock", typeof(ShakyIcicleIce), Sender.Host, "shook an icicle");
             Add(rules, "RPCA_StartBreaking", typeof(ShittyPiton), Sender.Host, "started breaking a piton");
             Add(rules, "RPCA_Break", typeof(ShittyPiton), Sender.Host, "broke a piton");
+            Add(rules, RpcNames.SyncDayTime, typeof(DayNightManager), Sender.Host, "changed the time of day");
+            Add(rules, RpcNames.SyncAscent, typeof(GameUtils), Sender.Host, "changed the ascent (difficulty)");
+            Add(rules, "RPC_SyncRunSettings", typeof(GameUtils), Sender.Host, "changed the run settings");
+            Add(rules, "RPC_SpawnResourceAtPosition", typeof(GameUtils), Sender.Host, "spawned a resource");
+            Add(rules, "RPC_SyncLava", typeof(LavaRising), Sender.Host, "moved the lava");
+            Add(rules, RpcNames.InitFog, typeof(OrbFogHandler), Sender.Host, "reset the fog");
+            Add(rules, RpcNames.SyncRunTime, typeof(RunManager), Sender.Host, "changed the run timer");
             return rules;
         }
 

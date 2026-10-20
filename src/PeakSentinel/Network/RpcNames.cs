@@ -17,6 +17,17 @@ namespace PeakSentinel.Network
         public const string PassOut = "RPCA_PassOut";
         public const string Zombify = "RPCA_Zombify";
         public const string Petrify = "RPC_PetrifyInstantly";
+        public const string SyncPetrify = "RPC_SyncPetrify";
+        public const string SyncDayTime = "RPCA_SyncTime";
+        public const string SyncAscent = "RPC_SyncAscent";
+        public const string RocketExplode = "RocketExplodeRPC";
+        public const string StartCarry = "RPCA_StartCarry";
+        public const string StartFeed = "SendFeedDataRPC";
+        public const string InitFog = "RPC_InitFog";
+        public const string StickFakeItem = "RPC_RequestStickFakeItemToPlayer";
+        public const string SpawnAndGrab = "InstantiateAndGrabRPC";
+        public const string AddToBackpack = "RPCAddItemToBackpack";
+        public const string SyncRunTime = "RPC_SyncTime";
         public const string Warp = "WarpPlayerRPC";
         public const string ForceAtPosition = "RPCA_AddForceAtPosition";
         public const string ForceToBodyPart = "RPCA_AddForceToBodyPart";

@@ -8,23 +8,29 @@ namespace PeakSentinel.Network
 {
     public sealed class RpcRouter
     {
-        private const byte ViewIdKey = 0;
-        private const byte MethodNameKey = 3;
-        private const byte ArgumentsKey = 4;
-        private const byte MethodIndexKey = 5;
 
         private readonly List<IRpcAudit> _audits;
         private readonly DebugTrace _trace;
+        private readonly StateLedger _ledger;
 
-        public RpcRouter(DebugTrace trace, params IRpcAudit[] audits)
+        public RpcRouter(DebugTrace trace, StateLedger ledger, params IRpcAudit[] audits)
         {
+            _ledger = ledger;
             _trace = trace;
             _audits = new List<IRpcAudit>(audits);
         }
 
+        public static string MethodOf(Hashtable rpc) // Static: pure lookup in the PUN RPC list, shared with MutedState
+        {
+            if (rpc[PunCodes.MethodIndexKey] is byte index)
+                return index < PhotonNetwork.PhotonServerSettings.RpcList.Count ? PhotonNetwork.PhotonServerSettings.RpcList[index] : null;
+
+            return rpc[PunCodes.MethodNameKey] as string;
+        }
+
         public bool Inspect(Hashtable rpc, PhotonPlayer sender)
         {
-            if (rpc == null || !(rpc[ViewIdKey] is int viewId))
+            if (rpc == null || !(rpc[PunCodes.ViewIdKey] is int viewId))
                 return true;
 
             string method = MethodOf(rpc);
@@ -32,7 +38,8 @@ namespace PeakSentinel.Network
             if (method == null)
                 return true;
 
-            RpcCall call = new RpcCall(method, sender, PhotonView.Find(viewId), rpc[ArgumentsKey] as object[]);
+            _ledger.Note(sender, rpc);
+            RpcCall call = new RpcCall(method, sender, PhotonView.Find(viewId), rpc[PunCodes.ArgumentsKey] as object[]);
 
             if (_trace.TracesAllRpcs || _audits.Exists(audit => audit.Watches(method)))
                 _trace.Rpc(method, sender, viewId, call.Owner, call.Arguments);
@@ -46,14 +53,6 @@ namespace PeakSentinel.Network
             }
 
             return allowed;
-        }
-
-        private string MethodOf(Hashtable rpc)
-        {
-            if (rpc[MethodIndexKey] is byte index)
-                return index < PhotonNetwork.PhotonServerSettings.RpcList.Count ? PhotonNetwork.PhotonServerSettings.RpcList[index] : null;
-
-            return rpc[MethodNameKey] as string;
         }
     }
 }

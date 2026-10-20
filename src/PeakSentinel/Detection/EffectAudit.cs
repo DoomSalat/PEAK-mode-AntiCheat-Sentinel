@@ -1,10 +1,12 @@
 using System.Collections.Generic;
+using HarmonyLib;
 using Peak.Afflictions;
 using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
 using Photon.Pun;
 using UnityEngine;
+using Zorro.Core;
 using PhotonPlayer = Photon.Realtime.Player;
 
 namespace PeakSentinel.Detection
@@ -16,20 +18,28 @@ namespace PeakSentinel.Detection
         private const string Tag = "fakes protection or stamina effects";
         private const string UnknownItem = "unknown item";
         private const string ShieldSource = "golden Bing Bong in hand";
+        private const string CampfireSource = "lit campfire nearby";
+        private const string CampfiresField = "ALL_CAMPFIRES";
+        private const float CampfireReachScale = 1.5f;
+        private const float GivenItemSeconds = 60f;
 
         private static readonly HashSet<Affliction.AfflictionType> Watched = new HashSet<Affliction.AfflictionType> // Static: fixed effects that cheats fake for godmode or endless stamina
         {
-            Affliction.AfflictionType.Invincibility, Affliction.AfflictionType.BingBongShield, Affliction.AfflictionType.InfiniteStamina,
+            Affliction.AfflictionType.Invincibility, Affliction.AfflictionType.BingBongShield, Affliction.AfflictionType.InfiniteStamina, Affliction.AfflictionType.NoHunger,
         };
 
-        private readonly Dictionary<int, (float Time, string Item)> _consumed = new Dictionary<int, (float Time, string Item)>();
+        private readonly Dictionary<int, (float Time, string Source)> _consumed = new Dictionary<int, (float Time, string Source)>();
         private readonly List<(PhotonPlayer Player, Affliction.AfflictionType Effect, float Time)> _pending = new List<(PhotonPlayer Player, Affliction.AfflictionType Effect, float Time)>();
         private SuspicionReport _report;
         private DebugTrace _trace;
         private DetectionSettings _detection;
+        private ItemRpcAudit _items;
+        private AreaEffects _areas;
 
-        public void Initialize(SuspicionReport report, DebugTrace trace, DetectionSettings detection)
+        public void Initialize(SuspicionReport report, DebugTrace trace, DetectionSettings detection, ItemRpcAudit items, AreaEffects areas)
         {
+            _areas = areas;
+            _items = items;
             _report = report;
             _trace = trace;
             _detection = detection;
@@ -45,19 +55,25 @@ namespace PeakSentinel.Detection
                     continue;
 
                 _pending.RemoveAt(i);
-                Settle(player, effect, ConsumedSource(player, time));
+
+                if (_items.RefusedGiveWithin(player, GivenItemSeconds))
+                    SettleGiven(player, effect);
+                else
+                    Settle(player, effect, ConsumedSource(player, time) ?? _areas.SourceNear(PlayerHandler.GetPlayerCharacter(player)));
             }
         }
 
         public bool Watches(string method)
         {
-            return method == RpcNames.Consume || method == RpcNames.SyncAfflictions;
+            return method == RpcNames.Consume || method == RpcNames.StartFeed || method == RpcNames.SyncAfflictions;
         }
 
         public bool Inspect(RpcCall call)
         {
             if (call.Method == RpcNames.Consume)
                 NoteConsume(call);
+            else if (call.Method == RpcNames.StartFeed)
+                NoteFeed(call);
             else if (_detection.SourcelessEffects.Value && call.FromOwner && !call.FromLocal && call.Argument(1) is int type && Watched.Contains((Affliction.AfflictionType)type))
                 Check(call, (Affliction.AfflictionType)type);
 
@@ -72,7 +88,22 @@ namespace PeakSentinel.Detection
                 return;
 
             Item item = call.Component<Item>();
-            _consumed[consumer.Owner.ActorNumber] = (Time.time, item == null ? UnknownItem : item.GetItemName());
+            _consumed[consumer.Owner.ActorNumber] = (Time.time, $"ate '{(item == null ? UnknownItem : item.GetItemName())}'");
+        }
+
+        private void NoteFeed(RpcCall call)
+        {
+            if (!(call.Argument(1) is int receiverId) || !(call.Argument(2) is int itemId))
+                return;
+
+            PhotonView receiver = PhotonView.Find(receiverId);
+
+            if (receiver == null || receiver.Owner == null)
+                return;
+
+            float feedTime = call.Argument(3) is float usingTime ? usingTime : 0f;
+            string item = SingletonAsset<ItemDatabase>.Instance.itemLookup.TryGetValue((ushort)itemId, out Item fed) ? fed.GetItemName() : UnknownItem;
+            _consumed[receiver.Owner.ActorNumber] = (Time.time + feedTime, $"was fed '{item}' by {PlayerNames.Name(call.Sender)}");
         }
 
         private void Check(RpcCall call, Affliction.AfflictionType effect)
@@ -82,6 +113,17 @@ namespace PeakSentinel.Detection
                 Character character = call.Component<Character>();
                 Settle(call.Sender, effect, character != null && HoldsShieldItem(character) ? ShieldSource : null);
                 return;
+            }
+
+            if (effect == Affliction.AfflictionType.NoHunger)
+            {
+                Character resting = call.Component<Character>();
+
+                if (resting != null && NearLitCampfire(resting))
+                {
+                    Settle(call.Sender, effect, CampfireSource);
+                    return;
+                }
             }
 
             _pending.Add((call.Sender, effect, Time.time));
@@ -95,15 +137,38 @@ namespace PeakSentinel.Detection
                 return;
 
             _report.Tag(player, Tag);
-            _report.Suspect(player, FindingCategory.Cheats, $"got {effect} with no source (nothing eaten around it, no golden Bing Bong in hand)");
+            _report.Suspect(player, FindingCategory.Cheats, $"got {effect} with no source (nothing eaten, no campfire, amulet or area item nearby, no golden Bing Bong in hand)");
+        }
+
+        private void SettleGiven(PhotonPlayer player, Affliction.AfflictionType effect)
+        {
+            _trace.Effect(player, $"got {effect} right after giving themselves items");
+            _report.Tag(player, Tag);
+            _report.Flag(player, FindingCategory.Cheats, $"got {effect} from an item they gave themselves (the host refused it, but it still works on their own side)");
         }
 
         private string ConsumedSource(PhotonPlayer player, float effectTime)
         {
-            if (!_consumed.TryGetValue(player.ActorNumber, out (float Time, string Item) consumed) || Mathf.Abs(effectTime - consumed.Time) > ConsumeSeconds)
+            if (!_consumed.TryGetValue(player.ActorNumber, out (float Time, string Source) consumed) || Mathf.Abs(effectTime - consumed.Time) > ConsumeSeconds)
                 return null;
 
-            return $"ate '{consumed.Item}' {effectTime - consumed.Time:F1} s before";
+            return $"{consumed.Source} {Mathf.Abs(effectTime - consumed.Time):F1} s before";
+        }
+
+        private bool NearLitCampfire(Character character)
+        {
+            foreach (Campfire campfire in Traverse.Create(typeof(Campfire)).Field<List<Campfire>>(CampfiresField).Value)
+            {
+                if (campfire == null || !campfire.Lit)
+                    continue;
+
+                float reach = campfire.moraleBoostRadius * CampfireReachScale;
+
+                if ((character.Center - campfire.transform.position).sqrMagnitude <= reach * reach)
+                    return true;
+            }
+
+            return false;
         }
 
         private bool HoldsShieldItem(Character character)

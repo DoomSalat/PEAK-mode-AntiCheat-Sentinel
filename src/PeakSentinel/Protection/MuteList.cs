@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using ExitGames.Client.Photon;
+using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using Photon.Pun;
 using PhotonPlayer = Photon.Realtime.Player;
@@ -11,11 +13,13 @@ namespace PeakSentinel.Protection
         private const string ActorKeyPrefix = "actor:";
 
         private readonly Dictionary<string, Muted> _muted = new Dictionary<string, Muted>();
+        private readonly StateLedger _ledger;
         private readonly SuspicionReport _report;
         private string _room;
 
-        public MuteList(SuspicionReport report)
+        public MuteList(SuspicionReport report, StateLedger ledger)
         {
+            _ledger = ledger;
             _report = report;
         }
 
@@ -57,13 +61,21 @@ namespace PeakSentinel.Protection
 
             _muted.Remove(KeyOf(player));
             RestoreVoice(muted);
-            _report.Notice(player, FindingCategory.Other, "unmuted: objects they made while muted may be missing on your side");
+            int restored = _ledger.CatchUp(player);
+            _report.Notice(player, FindingCategory.Other, $"unmuted: what they did while muted was caught up ({restored} objects and state updates: their ghost, objects they made or removed, statuses, death or revive)");
             Version++;
         }
 
-        public void CountDrop(PhotonPlayer player)
+        public void Drop(PhotonPlayer player, EventData data)
         {
             _muted[KeyOf(player)].Dropped++;
+
+            if (data.Code == PunCodes.RpcEvent)
+                _ledger.NoteMissed(player, data.CustomData as Hashtable);
+            else if (data.Code == PunCodes.SpawnEvent)
+                _ledger.NoteSpawn(player, data.CustomData as Hashtable);
+            else if (data.Code == PunCodes.RemoveEvent)
+                _ledger.NoteRemoval(player, data.CustomData as Hashtable);
         }
 
         private string KeyOf(PhotonPlayer player)

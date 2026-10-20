@@ -171,7 +171,7 @@ namespace PeakSentinel.Ui
             if (player.IsLocal)
                 return;
 
-            _ui.Button(buttons, ResyncLabel, ResyncWidth, ButtonSize, () => _desync.Fix(PlayerHandler.GetPlayerCharacter(player), "by you"));
+            _ui.Button(buttons, ResyncLabel, ResyncWidth, ButtonSize, () => _desync.Resync(player));
 
             if (player.IsMasterClient)
                 return;

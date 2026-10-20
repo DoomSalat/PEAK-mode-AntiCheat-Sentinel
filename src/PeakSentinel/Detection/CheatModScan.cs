@@ -17,6 +17,7 @@ namespace PeakSentinel.Detection
             ("CherryOwner", "Cherry cheat owner"),
             ("AtlUser", "Atlas cheat user"),
             ("AtlOwner", "Atlas cheat owner"),
+            ("pmx_ver", "PEAK-MX cheat user"),
         };
 
         private readonly HashSet<(int Actor, string Key)> _reported = new HashSet<(int Actor, string Key)>();

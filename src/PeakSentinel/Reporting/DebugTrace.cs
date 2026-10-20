@@ -91,7 +91,7 @@ namespace PeakSentinel.Reporting
                 if (i > 0)
                     text.Append(Separator);
 
-                text.Append(arguments[i] == null ? Null : arguments[i].ToString());
+                text.Append(arguments[i] is float[] numbers ? $"[{string.Join(" ", numbers)}]" : arguments[i] == null ? Null : arguments[i].ToString());
             }
 
             return text.ToString();

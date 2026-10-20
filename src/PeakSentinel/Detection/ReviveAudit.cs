@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
@@ -6,30 +5,22 @@ using UnityEngine;
 
 namespace PeakSentinel.Detection
 {
-    public sealed class ReviveAudit : MonoBehaviour, IRpcAudit
+    public sealed class ReviveAudit : IRpcAudit
     {
         private const float FreshSpawnSeconds = 20f;
         private const float ReviveReach = 12f;
         private const string BookTag = "BookOfBones";
         private const string Tag = "revives without a source";
 
-        private readonly Dictionary<Character, float> _firstSeen = new Dictionary<Character, float>();
-        private SuspicionReport _report;
-        private DetectionSettings _detection;
+        private readonly SuspicionReport _report;
+        private readonly DetectionSettings _detection;
+        private readonly SpawnClock _spawns;
 
-        public void Initialize(SuspicionReport report, DetectionSettings detection)
+        public ReviveAudit(SuspicionReport report, DetectionSettings detection, SpawnClock spawns)
         {
+            _spawns = spawns;
             _report = report;
             _detection = detection;
-        }
-
-        private void Update()
-        {
-            foreach (Character character in Character.AllCharacters)
-            {
-                if (character != null && !_firstSeen.ContainsKey(character))
-                    _firstSeen[character] = Time.time;
-            }
         }
 
         public bool Watches(string method)
@@ -54,7 +45,7 @@ namespace PeakSentinel.Detection
         private bool HasSource(RpcCall call, Character target)
         {
             if (call.FromOwner)
-                return _firstSeen.TryGetValue(target, out float seen) && Time.time - seen < FreshSpawnSeconds;
+                return _spawns.SpawnedWithin(target, FreshSpawnSeconds);
 
             Character reviver = PlayerHandler.GetPlayerCharacter(call.Sender);
             Item item = reviver == null ? null : reviver.data.currentItem;

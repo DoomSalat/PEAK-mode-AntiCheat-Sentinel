@@ -8,11 +8,11 @@ namespace PeakSentinel.Settings
 
         public DetectionSettings(ConfigFile config)
         {
-            HarmToOthers = config.Bind(Section, "HarmToOthers", true, "Report a player who kills, knocks out, zombifies, petrifies, teleports or hard-flings another player with a command.");
+            HarmToOthers = config.Bind(Section, "HarmToOthers", true, "Report a player who kills, knocks out, zombifies, petrifies, teleports, hard-flings, keeps pushing or blasts another player with a command.");
             BlockHarmToOthers = config.Bind(Section, "BlockHarmToOthers", true, "Refuse such commands on this client (the victim stays unharmed here; it protects you fully when you are the victim).");
             HostOnlyEvents = config.Bind(Section, "HostOnlyEvents", true, "Report a non-host who triggers events only the host may send: end of game, revive, helicopter, fog, campfire, bridges, eruption, beans, ropes, pitons, bees, foreign banana or ghost.");
             BlockHostOnlyEvents = config.Bind(Section, "BlockHostOnlyEvents", true, "Refuse such events on this client.");
-            DangerousSpawns = config.Bind(Section, "DangerousSpawns", true, "Report a non-host who spawns bee swarms, tornados or Bing Bong effects.");
+            DangerousSpawns = config.Bind(Section, "DangerousSpawns", true, "Report a non-host who spawns bee swarms, tornados, mushroom zombies, the Scoutmaster or Bing Bong effects.");
             BlockDangerousSpawns = config.Bind(Section, "BlockDangerousSpawns", true, "Do not create such objects on this client.");
             Flight = config.Bind(Section, "Flight", true, "Report a player who stays in the air without gravity acting on them (fly cheats). Thresholds are in the [Flight] section.");
             BlockFlight = config.Bind(Section, "BlockFlight", false, "As host, teleport a detected flyer back to where they last stood and knock them down for a moment. Off by default until the thresholds are tuned: a false detection would snap an honest player back too.");
@@ -26,11 +26,11 @@ namespace PeakSentinel.Settings
             BuildSpam = config.Bind(Section, "BuildSpam", true, "Report a player who builds with someone else's item or builds more than the [Flood] limit (flag spam).");
             BlockBuildSpam = config.Bind(Section, "BlockBuildSpam", true, "Ignore such builds on your side.");
             Flood = config.Bind(Section, "Flood", true, "Report a player who sends more commands or spawns per second than the [Flood] limits (lag and crash cheats).");
-            MuteFlooders = config.Bind(Section, "MuteFlooders", true, "Mute a flooder for this session on your side: everything they send is ignored except voice.");
+            MuteFlooders = config.Bind(Section, "MuteFlooders", false, "Mute a flooder for this session on your side: everything they send is ignored except voice.");
             CharacterTakeover = config.Bind(Section, "CharacterTakeover", true, "Report a player who tries to take control of another player's character (ownership request or transfer).");
             BlockCharacterTakeover = config.Bind(Section, "BlockCharacterTakeover", true, "Ignore such takeovers on your side.");
-            CheatModMarkers = config.Bind(Section, "CheatModMarkers", true, "Report players marked by the Cherry or Atlas cheat mods (same check as PEAKER).");
-            KickCheatModUsers = config.Bind(Section, "KickCheatModUsers", true, "As host, kick players marked by the Cherry or Atlas cheat mods.");
+            CheatModMarkers = config.Bind(Section, "CheatModMarkers", true, "Report players marked by the Cherry, Atlas or PEAK-MX cheat mods.");
+            KickCheatModUsers = config.Bind(Section, "KickCheatModUsers", true, "As host, kick players marked by the Cherry, Atlas or PEAK-MX cheat mods.");
         }
 
         public ConfigEntry<bool> HarmToOthers { get; }

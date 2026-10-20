@@ -11,16 +11,6 @@ namespace PeakSentinel.Protection
 {
     public sealed class PacketGate
     {
-        private const byte RpcEvent = 200;
-        private const byte SerializeEvent = 201;
-        private const byte SpawnEvent = 202;
-        private const byte SerializeReliableEvent = 206;
-        private const byte DestroyEvent = 204;
-        private const byte OwnershipUpdateEvent = 212;
-        private const byte ViewIdKey = 0;
-        private const byte OwnershipRequestEvent = 209;
-        private const byte OwnershipTransferEvent = 210;
-        private const byte FirstServerEvent = 220;
         private const float FloodWindow = 1f;
         private const float FloodReportSeconds = 10f;
         private const string FloodTag = "floods the network";
@@ -47,7 +37,7 @@ namespace PeakSentinel.Protection
         {
             int actor = data.Sender;
 
-            if (actor <= 0 || data.Code >= FirstServerEvent || PhotonNetwork.CurrentRoom == null)
+            if (actor <= 0 || data.Code >= PunCodes.FirstServerEvent || PhotonNetwork.CurrentRoom == null)
                 return true;
 
             PhotonPlayer sender = PhotonNetwork.CurrentRoom.GetPlayer(actor);
@@ -57,19 +47,19 @@ namespace PeakSentinel.Protection
 
             if (_mutes.IsMuted(sender))
             {
-                _mutes.CountDrop(sender);
+                _mutes.Drop(sender, data);
                 return false;
             }
 
-            if ((data.Code == SerializeEvent || data.Code == SerializeReliableEvent) && data.CustomData is object[] serialized && serialized.Length > 0 && serialized[0] is int sentAt)
+            if ((data.Code == PunCodes.SerializeEvent || data.Code == PunCodes.SerializeReliableEvent) && data.CustomData is object[] serialized && serialized.Length > 0 && serialized[0] is int sentAt)
                 _latency.Note(actor, sentAt);
 
             CountRate(sender, data.Code);
 
-            if (data.Code == OwnershipRequestEvent || data.Code == OwnershipTransferEvent)
+            if (data.Code == PunCodes.OwnershipRequestEvent || data.Code == PunCodes.OwnershipTransferEvent)
                 return CheckTakeover(sender, data.CustomData as int[]);
 
-            if (data.Code == DestroyEvent)
+            if (data.Code == PunCodes.RemoveEvent)
                 return CheckDestroy(sender, data.CustomData as Hashtable);
 
             return true;
@@ -77,9 +67,9 @@ namespace PeakSentinel.Protection
 
         private void CountRate(PhotonPlayer sender, byte code)
         {
-            bool objectEvent = code == DestroyEvent || code == OwnershipRequestEvent || code == OwnershipTransferEvent || code == OwnershipUpdateEvent;
+            bool objectEvent = code == PunCodes.RemoveEvent || code == PunCodes.OwnershipRequestEvent || code == PunCodes.OwnershipTransferEvent || code == PunCodes.OwnershipUpdateEvent;
 
-            if (!_detection.Flood.Value || (code != RpcEvent && code != SpawnEvent && !objectEvent))
+            if (!_detection.Flood.Value || (code != PunCodes.RpcEvent && code != PunCodes.SpawnEvent && !objectEvent))
                 return;
 
             float now = Time.unscaledTime;
@@ -88,7 +78,7 @@ namespace PeakSentinel.Protection
             if (now - start > FloodWindow)
                 (start, rpcs, spawns, objects) = (now, 0, 0, 0);
 
-            if (code == SpawnEvent)
+            if (code == PunCodes.SpawnEvent)
                 spawns++;
             else if (objectEvent)
                 objects++;
@@ -112,7 +102,7 @@ namespace PeakSentinel.Protection
 
         private bool CheckDestroy(PhotonPlayer sender, Hashtable content)
         {
-            if (!_detection.ObjectDestroy.Value || sender.IsMasterClient || content == null || !(content[ViewIdKey] is int viewId))
+            if (!_detection.ObjectDestroy.Value || sender.IsMasterClient || content == null || !(content[PunCodes.ViewIdKey] is int viewId))
                 return true;
 
             PhotonView view = PhotonView.Find(viewId);

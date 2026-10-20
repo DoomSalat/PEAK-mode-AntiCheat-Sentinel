@@ -1,5 +1,6 @@
 using ExitGames.Client.Photon;
 using HarmonyLib;
+using PeakSentinel.Network;
 using Photon.Pun;
 using UnityEngine;
 using PhotonPlayer = Photon.Realtime.Player;
@@ -10,7 +11,6 @@ namespace PeakSentinel.Patches
     [HarmonyPatch]
     public static class NetworkPatches // Static: Harmony patch class
     {
-        private const byte PrefabNameKey = 0;
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(PhotonNetwork), nameof(PhotonNetwork.OnEvent))]
@@ -37,7 +37,7 @@ namespace PeakSentinel.Patches
         [HarmonyPatch(typeof(PhotonNetwork), nameof(PhotonNetwork.NetworkInstantiate), new[] { typeof(Hashtable), typeof(PhotonPlayer) })]
         public static bool FilterIncomingInstantiate(Hashtable networkEvent, PhotonPlayer creator, ref GameObject __result)
         {
-            if (SentinelHooks.Instantiate == null || networkEvent == null || SentinelHooks.Instantiate.AllowCreate(creator, networkEvent[PrefabNameKey] as string))
+            if (SentinelHooks.Instantiate == null || networkEvent == null || SentinelHooks.Instantiate.AllowCreate(creator, networkEvent[PunCodes.PrefabNameKey] as string))
                 return true;
 
             __result = null;

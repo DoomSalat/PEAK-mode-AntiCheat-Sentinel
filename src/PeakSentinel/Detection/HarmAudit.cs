@@ -17,17 +17,22 @@ namespace PeakSentinel.Detection
         private const string FlingsTag = "flings other players";
         private const string InfinityTag = "warps players to infinity";
         private const float MaxWorldCoordinate = 100000f;
+        private const float NextToPlayer = 3f;
+        private const float WarpItemReach = 6f;
+        private const string SelfTeleportTag = "teleports themselves";
 
         private static readonly HashSet<string> Methods = new HashSet<string> // Static: fixed set of RPC names that can harm another player
         {
-            RpcNames.Die, RpcNames.SetDead, RpcNames.PassOut, RpcNames.Zombify, RpcNames.Petrify, RpcNames.Warp, RpcNames.ForceAtPosition, RpcNames.ForceToBodyPart,
+            RpcNames.Die, RpcNames.SetDead, RpcNames.PassOut, RpcNames.Zombify, RpcNames.Petrify, RpcNames.SyncPetrify, RpcNames.Warp, RpcNames.ForceAtPosition, RpcNames.ForceToBodyPart, RpcNames.RocketExplode,
         };
 
+        private readonly ItemLocator _locator;
         private readonly SuspicionReport _report;
         private readonly DetectionSettings _detection;
 
-        public HarmAudit(SuspicionReport report, DetectionSettings detection)
+        public HarmAudit(SuspicionReport report, DetectionSettings detection, ItemLocator locator)
         {
+            _locator = locator;
             _report = report;
             _detection = detection;
         }
@@ -41,6 +46,9 @@ namespace PeakSentinel.Detection
         {
             if (call.Method == RpcNames.Warp && call.Sender != null && !call.FromLocal && call.Argument(0) is Vector3 target && !IsSane(target))
                 return _report.Refuse(call.Sender, FindingCategory.Cheats, InfinityTag, $"warped {PlayerNames.Name(call.Owner)} to an invalid position {target} (black screen), always blocked", true);
+
+            if (call.Method == RpcNames.Warp && _detection.HarmToOthers.Value && call.FromOwner && !call.FromHost && !call.FromLocal && call.Argument(0) is Vector3 destination)
+                return CheckSelfWarp(call, destination);
 
             if (!_detection.HarmToOthers.Value || call.Sender == null || call.Owner == null || call.FromOwner || call.FromHost || call.FromLocal)
                 return true;
@@ -63,8 +71,14 @@ namespace PeakSentinel.Detection
                 case RpcNames.Petrify:
                     return Refuse(call, CursesTag, $"petrified {victim}", null);
 
+                case RpcNames.SyncPetrify:
+                    return Refuse(call, CursesTag, $"set the petrification of {victim} to {call.Argument(0)}%", Unpetrify(character, victim));
+
                 case RpcNames.Warp:
                     return Refuse(call, TeleportsTag, $"teleported {victim} to {call.Argument(0)}", Return(character, victim));
+
+                case RpcNames.RocketExplode:
+                    return Refuse(call, FlingsTag, $"set off an explosion on {victim}", Return(character, victim));
 
                 case RpcNames.ForceAtPosition:
                     return CheckFling(call, victim, call.MagnitudeAt(0), character);
@@ -72,6 +86,37 @@ namespace PeakSentinel.Detection
                 default:
                     return CheckFling(call, victim, Mathf.Max(call.MagnitudeAt(1), call.MagnitudeAt(2)), character);
             }
+        }
+
+        private bool CheckSelfWarp(RpcCall call, Vector3 destination)
+        {
+            Character self = call.Component<Character>();
+
+            if (self == null || (self.data.currentItem != null && self.data.currentItem.TryGetComponent(out Action_WarpToRandomPlayer _)) || _locator.OwnedNear<Peak.WarpOnThrow>(call.Sender, destination, WarpItemReach))
+                return true;
+
+            bool block = _detection.BlockHarmToOthers.Value;
+            Vector3 place = self.Center;
+            string action = $"teleported themselves {WhereTo(self, destination)} with no warp item";
+
+            if (block && PhotonNetwork.IsMasterClient)
+            {
+                self.photonView.RPC(RpcNames.Warp, RpcTarget.All, place, false);
+                action += ", sent back for everyone";
+            }
+
+            return _report.Refuse(call.Sender, FindingCategory.Cheats, SelfTeleportTag, action, block, Return(self, PlayerNames.Name(call.Sender)));
+        }
+
+        private string WhereTo(Character self, Vector3 destination)
+        {
+            foreach (Character other in Character.AllCharacters)
+            {
+                if (other != null && other != self && !other.isBot && (other.Center - destination).sqrMagnitude <= NextToPlayer * NextToPlayer)
+                    return $"next to {PlayerNames.Name(other.photonView.Owner)}";
+            }
+
+            return $"to {destination}";
         }
 
         private bool IsSane(Vector3 position)
@@ -96,6 +141,15 @@ namespace PeakSentinel.Detection
 
             Vector3 place = character.Center;
             return new Repair($"revived {victim} where they died", () => character.photonView.RPC(RpcNames.ReviveAtPosition, RpcTarget.All, place, false, -1));
+        }
+
+        private Repair Unpetrify(Character character, string victim)
+        {
+            if (character == null)
+                return null;
+
+            int amount = character.data.petrifyAmount;
+            return new Repair($"returned the petrification of {victim} to {amount}%", () => character.photonView.RPC(RpcNames.SyncPetrify, RpcTarget.All, amount));
         }
 
         private Repair WakeUp(Character character, string victim)

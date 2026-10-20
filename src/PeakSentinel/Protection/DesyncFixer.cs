@@ -1,10 +1,12 @@
 using System.Collections;
 using System.Collections.Generic;
+using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
 using Unity.Mathematics;
 using UnityEngine;
 using Zorro.Core;
+using PhotonPlayer = Photon.Realtime.Player;
 
 namespace PeakSentinel.Protection
 {
@@ -22,10 +24,12 @@ namespace PeakSentinel.Protection
         private readonly Dictionary<Character, (CharacterSyncer Syncer, float CursedFor, float FixedAt)> _tracks = new Dictionary<Character, (CharacterSyncer Syncer, float CursedFor, float FixedAt)>();
         private SuspicionReport _report;
         private OtherSettings _settings;
+        private StateLedger _ledger;
         private float _nextScan;
 
-        public void Initialize(SuspicionReport report, OtherSettings settings)
+        public void Initialize(SuspicionReport report, OtherSettings settings, StateLedger ledger)
         {
+            _ledger = ledger;
             _report = report;
             _settings = settings;
         }
@@ -42,6 +46,13 @@ namespace PeakSentinel.Protection
                 if (character != null && !character.IsLocal && !character.isBot)
                     Watch(character);
             }
+        }
+
+        public void Resync(PhotonPlayer player)
+        {
+            int replayed = _ledger.Reapply(player);
+            _report.Notice(player, FindingCategory.Other, $"resynced by you: {replayed} of their latest state updates were applied again");
+            Fix(PlayerHandler.GetPlayerCharacter(player), "by you");
         }
 
         public void Fix(Character character, string reason)

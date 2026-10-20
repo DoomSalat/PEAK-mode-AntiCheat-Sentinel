@@ -18,6 +18,7 @@ namespace PeakSentinel.Ui
         private const string CheaterMark = "!";
         private const string MutedMark = "X";
         private const float CrossSize = 80f;
+        private const float CrossLift = 8f;
 
         private static readonly Color MutedTint = new Color(0.4f, 0.4f, 0.4f, 1f); // Static: fixed grey for muted avatars
         private static readonly Color CrossColor = new Color(0.12f, 0.1f, 0.08f, 0.9f); // Static: fixed colour of the mute cross
@@ -99,6 +100,8 @@ namespace PeakSentinel.Ui
             _cross.fontSize = CrossSize;
             _cross.color = CrossColor;
             _cross.text = MutedMark;
+            _cross.rectTransform.offsetMin = new Vector2(0f, CrossLift);
+            _cross.rectTransform.offsetMax = new Vector2(0f, CrossLift);
             _cross.transform.SetAsFirstSibling();
         }
 

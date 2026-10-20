@@ -19,7 +19,7 @@ namespace PeakSentinel
     {
         public const string Guid = "peaksentinel";
         public const string Name = "Peak Sentinel";
-        public const string Version = "0.2.1";
+        public const string Version = "1.0.0";
 
         private const string TraceFile = "PeakSentinel.log";
         private const string BansFile = "PeakSentinel.bans.txt";
@@ -40,26 +40,32 @@ namespace PeakSentinel
             SuspicionReport report = new SuspicionReport(Logger, _trace, findings);
             SentinelHooks.Findings = findings;
             BanList bans = new BanList(Path.Combine(Paths.ConfigPath, BansFile));
-            MuteList mutes = new MuteList(report);
+            ForeignObjects objects = new ForeignObjects();
+            StateLedger ledger = new StateLedger(objects);
+            MuteList mutes = new MuteList(report, ledger);
             SentinelHooks.Mutes = mutes;
             FloodSettings flood = new FloodSettings(Config);
             LatencyMeter latency = new LatencyMeter();
             SentinelHooks.Gate = new PacketGate(report, detection, flood, mutes, latency);
             GameObject host = new GameObject(Name) { hideFlags = HideFlags.HideAndDontSave };
             DontDestroyOnLoad(host);
+            SpawnClock spawns = host.AddComponent<SpawnClock>();
+            ItemRpcAudit items = new ItemRpcAudit(report, protection, spawns, new BackpackSwap());
+            ItemLocator locator = new ItemLocator();
+            AreaEffects areas = new AreaEffects(locator);
             EffectAudit effects = host.AddComponent<EffectAudit>();
-            effects.Initialize(report, _trace, detection);
-            ReviveAudit revives = host.AddComponent<ReviveAudit>();
-            revives.Initialize(report, detection);
-            WireNetwork(report, protection, detection, other, flood, effects, revives);
+            effects.Initialize(report, _trace, detection, items, areas);
+            StatusAudit statuses = host.AddComponent<StatusAudit>();
+            statuses.Initialize(report, detection, locator);
+            WireNetwork(report, protection, detection, other, flood, items, locator, areas, effects, statuses, spawns, ledger, objects);
             host.AddComponent<HostGuard>().Initialize(report, other);
             DesyncFixer desync = host.AddComponent<DesyncFixer>();
-            desync.Initialize(report, other);
+            desync.Initialize(report, other, ledger);
             BanGuard banGuard = host.AddComponent<BanGuard>();
             banGuard.Initialize(report, bans);
             host.AddComponent<CheatModScan>().Initialize(report, detection);
             host.AddComponent<IdentityAudit>().Initialize(report, detection);
-            host.AddComponent<FlightAudit>().Initialize(report, _trace, detection, new FlightSettings(Config), new FlightExemptions(new RopeLinks(), SentinelHooks.Environment));
+            host.AddComponent<FlightAudit>().Initialize(report, _trace, detection, new FlightSettings(Config), new FlightExemptions(new RopeLinks(), SentinelHooks.Environment, spawns));
             host.AddComponent<StaminaAudit>().Initialize(report, _trace, detection, new StaminaSettings(Config));
             SentinelWindow window = host.AddComponent<SentinelWindow>();
             window.Initialize($"{Name} {Version}", manager, protection, detection, other, findings, report, bans, banGuard, mutes, new ReportExport(Paths.BepInExRootPath, findings), latency, desync);
@@ -76,23 +82,27 @@ namespace PeakSentinel
             _trace?.Dispose();
         }
 
-        private void WireNetwork(SuspicionReport report, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, FloodSettings flood, EffectAudit effects, ReviveAudit revives)
+        private void WireNetwork(SuspicionReport report, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, FloodSettings flood, ItemRpcAudit items, ItemLocator locator, AreaEffects areas, EffectAudit effects, StatusAudit statuses, SpawnClock spawns, StateLedger ledger, ForeignObjects objects)
         {
             HandGuard hands = new HandGuard(report, protection);
             SentinelHooks.Report = report;
             SentinelHooks.Environment = new EnvironmentMarks();
             SentinelHooks.Hands = hands;
-            SentinelHooks.Instantiate = new InstantiateAudit(report, _trace, detection);
-            SentinelHooks.Router = new RpcRouter(_trace,
-                new ItemRpcAudit(report, protection),
+            SentinelHooks.Instantiate = new InstantiateAudit(report, _trace, detection, protection, items, objects, locator);
+            SentinelHooks.Router = new RpcRouter(_trace, ledger,
+                items,
                 hands,
                 new KickShield(report, other),
-                new HarmAudit(report, detection),
+                new HarmAudit(report, detection, locator),
                 new WorldAudit(report, detection),
                 new ControlAudit(report, detection),
+                new CarryAudit(report, detection),
                 new BuildAudit(report, detection, flood),
-                revives,
-                effects);
+                new ReviveAudit(report, detection, spawns),
+                new PushAudit(report, detection, locator),
+                areas,
+                effects,
+                statuses);
         }
     }
 }

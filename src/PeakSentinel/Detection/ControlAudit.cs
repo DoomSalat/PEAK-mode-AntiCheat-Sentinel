@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
@@ -22,6 +23,13 @@ namespace PeakSentinel.Detection
             { RpcNames.SyncStatuses, "show fake statuses" },
             { RpcNames.ApplyStatuses, "get statuses" },
             { RpcNames.UnPassOut, "wake up" },
+            { "StopVineClimbingRpc", "let go of the vine" },
+            { "RPCA_ClimbJump", "jump off the wall" },
+            { "RPCA_Stick", "get stuck" },
+            { "RPCA_ClearStickData", "come unstuck" },
+            { "RPCA_ClearJoint", "come unstuck" },
+            { "DestroyHeldItemRpc", "lose the item in hand" },
+            { "DropItemRpc", "throw an item" },
         };
 
         private readonly SuspicionReport _report;
@@ -43,7 +51,16 @@ namespace PeakSentinel.Detection
             if (!_detection.ForcedActions.Value || call.Sender == null || call.Owner == null || call.FromOwner || call.FromHost || call.FromLocal)
                 return true;
 
-            return _report.Refuse(call.Sender, FindingCategory.Cheats, Tag, $"made {PlayerNames.Name(call.Owner)} {Actions[call.Method]}", _detection.BlockForcedActions.Value);
+            return _report.Refuse(call.Sender, FindingCategory.Cheats, Tag, $"made {PlayerNames.Name(call.Owner)} {Actions[call.Method]}{StatusesOf(call)}", _detection.BlockForcedActions.Value);
+        }
+
+        private string StatusesOf(RpcCall call)
+        {
+            if (call.Method != RpcNames.ApplyStatuses || !(call.Argument(0) is float[] amounts))
+                return string.Empty;
+
+            IEnumerable<string> statuses = amounts.Select((amount, index) => (amount, index)).Where(status => status.amount > 0f).Select(status => $"{(CharacterAfflictions.STATUSTYPE)status.index} {status.amount * 100f:F0}%");
+            return $": {string.Join(", ", statuses)}";
         }
     }
 }
