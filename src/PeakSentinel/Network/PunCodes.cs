@@ -13,9 +13,12 @@ namespace PeakSentinel.Network
         public const byte FirstServerEvent = 220;
         public const byte ViewIdKey = 0;
         public const byte PrefabNameKey = 0;
+        public const byte RpcTimestampKey = 2;
         public const byte MethodNameKey = 3;
         public const byte ArgumentsKey = 4;
         public const byte MethodIndexKey = 5;
         public const byte InstantiationIdKey = 7;
+        public const byte SpawnTimestampKey = 6;
+        public const int CachedAgeMilliseconds = 3000;
     }
 }

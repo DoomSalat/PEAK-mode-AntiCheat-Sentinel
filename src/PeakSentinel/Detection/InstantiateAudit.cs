@@ -57,7 +57,7 @@ namespace PeakSentinel.Detection
             return !block || removeForAll;
         }
 
-        public void Inspect(PhotonPlayer creator, GameObject created, bool fromNetwork)
+        public void Inspect(PhotonPlayer creator, GameObject created, bool fromNetwork, int sentAt)
         {
             if (_removeNext)
             {
@@ -74,7 +74,7 @@ namespace PeakSentinel.Detection
 
             _trace.Instantiate(creator, created.name, created.transform.position);
 
-            if (!fromNetwork || creator == null || creator.IsMasterClient)
+            if (!fromNetwork || creator == null || creator.IsMasterClient || unchecked(PhotonNetwork.ServerTimestamp - sentAt) > PunCodes.CachedAgeMilliseconds)
                 return;
 
             if (created.transform.position.y < BackpackVisualHeight)

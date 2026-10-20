@@ -49,7 +49,7 @@ namespace PeakSentinel.Detection
                     return true;
             }
 
-            return Matches(player.tempFullSlot, match);
+            return Matches(player.tempFullSlot, match) || Matches(player.backpackSlot, match);
         }
 
         private bool Matches(ItemSlot slot, Func<Item, bool> match)

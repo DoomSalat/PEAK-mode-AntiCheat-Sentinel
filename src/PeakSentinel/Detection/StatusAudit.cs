@@ -57,11 +57,14 @@ namespace PeakSentinel.Detection
                 return true;
 
             foreach (Action_InflictPoison poison in item.GetComponents<Action_InflictPoison>())
-                Expect(consumer, item, CharacterAfflictions.STATUSTYPE.Poison, poison.poisonPerSecond, poison.delay + SyncSeconds);
+            {
+                if (poison.isActiveAndEnabled)
+                    Expect(consumer, item, CharacterAfflictions.STATUSTYPE.Poison, poison.poisonPerSecond, poison.delay + SyncSeconds);
+            }
 
             foreach (Action_ModifyStatus modify in item.GetComponents<Action_ModifyStatus>())
             {
-                if (modify.changeAmount > 0f)
+                if (modify.isActiveAndEnabled && modify.changeAmount > 0f)
                     Expect(consumer, item, modify.statusType, modify.changeAmount, SyncSeconds);
             }
 

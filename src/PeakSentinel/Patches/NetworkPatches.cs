@@ -48,7 +48,7 @@ namespace PeakSentinel.Patches
         [HarmonyPatch(typeof(PhotonNetwork), nameof(PhotonNetwork.NetworkInstantiate), new[] { typeof(PunInstantiateParameters), typeof(bool), typeof(bool) })]
         public static void InspectInstantiate(PunInstantiateParameters parameters, bool instantiateEvent, GameObject __result)
         {
-            SentinelHooks.Instantiate?.Inspect(parameters.creator, __result, instantiateEvent);
+            SentinelHooks.Instantiate?.Inspect(parameters.creator, __result, instantiateEvent, parameters.timestamp);
         }
 
         [HarmonyPostfix]

@@ -16,13 +16,16 @@ namespace PeakSentinel.Protection
         private const string FloodTag = "floods the network";
         private const string TakeoverTag = "takes over other characters";
         private const string DestroyTag = "destroys other players' objects";
+        private const float JoinGraceSeconds = 15f;
 
-        private readonly Dictionary<int, (float Start, int Rpcs, int Spawns, int Objects, float Reported)> _rates = new Dictionary<int, (float Start, int Rpcs, int Spawns, int Objects, float Reported)>();
+        private readonly Dictionary<int, (float Start, int Rpcs, int Spawns, int Objects, int Streak, float Reported)> _rates = new Dictionary<int, (float Start, int Rpcs, int Spawns, int Objects, int Streak, float Reported)>();
         private readonly SuspicionReport _report;
         private readonly DetectionSettings _detection;
         private readonly FloodSettings _flood;
         private readonly MuteList _mutes;
         private readonly LatencyMeter _latency;
+        private string _room;
+        private float _joinedAt;
 
         public PacketGate(SuspicionReport report, DetectionSettings detection, FloodSettings flood, MuteList mutes, LatencyMeter latency)
         {
@@ -54,7 +57,8 @@ namespace PeakSentinel.Protection
             if ((data.Code == PunCodes.SerializeEvent || data.Code == PunCodes.SerializeReliableEvent) && data.CustomData is object[] serialized && serialized.Length > 0 && serialized[0] is int sentAt)
                 _latency.Note(actor, sentAt);
 
-            CountRate(sender, data.Code);
+            if (!JustJoined() && !IsCached(data))
+                CountRate(sender, data.Code);
 
             if (data.Code == PunCodes.OwnershipRequestEvent || data.Code == PunCodes.OwnershipTransferEvent)
                 return CheckTakeover(sender, data.CustomData as int[]);
@@ -65,6 +69,28 @@ namespace PeakSentinel.Protection
             return true;
         }
 
+        private bool JustJoined()
+        {
+            string room = PhotonNetwork.CurrentRoom.Name;
+
+            if (room != _room)
+            {
+                _room = room;
+                _joinedAt = Time.unscaledTime;
+            }
+
+            return Time.unscaledTime - _joinedAt < JoinGraceSeconds;
+        }
+
+        private bool IsCached(EventData data)
+        {
+            if (!(data.CustomData is Hashtable content))
+                return false;
+
+            object sentAt = data.Code == PunCodes.SpawnEvent ? content[PunCodes.SpawnTimestampKey] : content[PunCodes.RpcTimestampKey];
+            return sentAt is int timestamp && unchecked(PhotonNetwork.ServerTimestamp - timestamp) > PunCodes.CachedAgeMilliseconds;
+        }
+
         private void CountRate(PhotonPlayer sender, byte code)
         {
             bool objectEvent = code == PunCodes.RemoveEvent || code == PunCodes.OwnershipRequestEvent || code == PunCodes.OwnershipTransferEvent || code == PunCodes.OwnershipUpdateEvent;
@@ -73,10 +99,21 @@ namespace PeakSentinel.Protection
                 return;
 
             float now = Time.unscaledTime;
-            (float start, int rpcs, int spawns, int objects, float reported) = _rates.TryGetValue(sender.ActorNumber, out var rate) ? rate : (now, 0, 0, 0, -FloodReportSeconds);
+            (float start, int rpcs, int spawns, int objects, int streak, float reported) = _rates.TryGetValue(sender.ActorNumber, out var rate) ? rate : (now, 0, 0, 0, 0, -FloodReportSeconds);
 
             if (now - start > FloodWindow)
+            {
+                bool over = rpcs > _flood.MaxRpcPerSecond.Value || spawns > _flood.MaxSpawnsPerSecond.Value || objects > _flood.MaxObjectEventsPerSecond.Value;
+                streak = over && now - start < FloodWindow * 2f ? streak + 1 : 0;
+
+                if (streak >= _flood.FloodSeconds.Value && now - reported >= FloodReportSeconds)
+                {
+                    reported = now;
+                    ReportFlood(sender, rpcs, spawns, objects, streak);
+                }
+
                 (start, rpcs, spawns, objects) = (now, 0, 0, 0);
+            }
 
             if (code == PunCodes.SpawnEvent)
                 spawns++;
@@ -85,21 +122,17 @@ namespace PeakSentinel.Protection
             else
                 rpcs++;
 
-            bool flooding = rpcs > _flood.MaxRpcPerSecond.Value || spawns > _flood.MaxSpawnsPerSecond.Value || objects > _flood.MaxObjectEventsPerSecond.Value;
-
-            if (flooding && now - reported >= FloodReportSeconds)
-            {
-                reported = now;
-                bool mute = _detection.MuteFlooders.Value;
-                _report.Refuse(sender, FindingCategory.Cheats, FloodTag, $"floods the network: {rpcs} commands, {spawns} spawns and {objects} object changes in a second", mute);
-
-                if (mute)
-                    _mutes.Mute(sender, "flood");
-            }
-
-            _rates[sender.ActorNumber] = (start, rpcs, spawns, objects, reported);
+            _rates[sender.ActorNumber] = (start, rpcs, spawns, objects, streak, reported);
         }
 
+        private void ReportFlood(PhotonPlayer sender, int rpcs, int spawns, int objects, int seconds)
+        {
+            bool mute = _detection.MuteFlooders.Value;
+            _report.Refuse(sender, FindingCategory.Cheats, FloodTag, $"floods the network for {seconds} s in a row: {rpcs} commands, {spawns} spawns and {objects} object changes in the last second", mute);
+
+            if (mute)
+                _mutes.Mute(sender, "flood");
+        }
         private bool CheckDestroy(PhotonPlayer sender, Hashtable content)
         {
             if (!_detection.ObjectDestroy.Value || sender.IsMasterClient || content == null || !(content[PunCodes.ViewIdKey] is int viewId))

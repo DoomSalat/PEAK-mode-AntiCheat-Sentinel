@@ -15,6 +15,7 @@ namespace PeakSentinel.Detection.Flight
         private const string Climbing = "climbing";
         private const string Carried = "carried";
         private const string PassedOut = "passed out";
+        private const string Fallen = "knocked down (ragdoll)";
         private const string Balloons = "balloons";
         private const string Glider = "glider or parasol";
         private const string LowGravity = "low gravity effect";
@@ -54,6 +55,9 @@ namespace PeakSentinel.Detection.Flight
 
             if (data.passedOut || data.fullyPassedOut)
                 return PassedOut;
+
+            if (data.fallSeconds > 0f)
+                return Fallen;
 
             if (character.refs.balloons != null && (character.refs.balloons.heldBalloonCount > 0 || character.refs.balloons.currentBalloonCount > 0))
                 return Balloons;
