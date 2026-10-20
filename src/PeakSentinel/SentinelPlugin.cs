@@ -44,7 +44,9 @@ namespace PeakSentinel
             DontDestroyOnLoad(host);
             EffectAudit effects = host.AddComponent<EffectAudit>();
             effects.Initialize(report, _trace, detection);
-            WireNetwork(report, protection, detection, other, effects);
+            ReviveAudit revives = host.AddComponent<ReviveAudit>();
+            revives.Initialize(report, detection);
+            WireNetwork(report, protection, detection, other, effects, revives);
             host.AddComponent<HostGuard>().Initialize(report, other);
             BanGuard banGuard = host.AddComponent<BanGuard>();
             banGuard.Initialize(report, bans);
@@ -66,7 +68,7 @@ namespace PeakSentinel
             _trace?.Dispose();
         }
 
-        private void WireNetwork(SuspicionReport report, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, EffectAudit effects)
+        private void WireNetwork(SuspicionReport report, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, EffectAudit effects, ReviveAudit revives)
         {
             HandGuard hands = new HandGuard(report, protection);
             SentinelHooks.Report = report;
@@ -79,6 +81,7 @@ namespace PeakSentinel
                 new KickShield(report, other),
                 new HarmAudit(report, detection),
                 new WorldAudit(report, detection),
+                revives,
                 effects);
         }
     }

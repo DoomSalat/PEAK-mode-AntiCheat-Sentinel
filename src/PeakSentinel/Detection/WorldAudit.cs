@@ -125,8 +125,6 @@ namespace PeakSentinel.Detection
             Add(rules, RpcNames.ExtinguishCampfire, typeof(Campfire), Sender.Host, "tried to extinguish a campfire");
             Add(rules, "RPCEndGame", typeof(Character), Sender.Host, "forced the game to end");
             Add(rules, "RPCEndGame_ForceWin", typeof(Character), Sender.Host, "forced a win");
-            Add(rules, "ReviveCharacter", typeof(Character), Sender.Host, "revived", true);
-            Add(rules, "RPCA_ReviveAtPosition", typeof(Character), Sender.Host, "revived", true);
             Add(rules, "RPCA_InitGhost", typeof(PlayerGhost), Sender.Owner, "took over the ghost of", true);
             Add(rules, "RPCA_SetTarget", typeof(PlayerGhost), Sender.Owner, "controlled the ghost of", true);
             Add(rules, "RPCA_SpawnEruption", typeof(EruptionSpawner), Sender.Host, "spawned a volcano eruption");

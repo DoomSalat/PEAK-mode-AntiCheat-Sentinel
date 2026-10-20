@@ -14,7 +14,7 @@ if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 New-Item -ItemType Directory -Force (Join-Path $stage 'plugins') | Out-Null
 Copy-Item (Join-Path $project 'bin\Release\netstandard2.1\PeakSentinel.dll') (Join-Path $stage 'plugins')
 Copy-Item (Join-Path $PSScriptRoot 'thunderstore\icon.png') $stage
-Copy-Item (Join-Path $root 'README.md') $stage
+Copy-Item (Join-Path $PSScriptRoot 'thunderstore\README.md') $stage
 $manifest = (Get-Content (Join-Path $PSScriptRoot 'thunderstore\manifest.json') -Raw -Encoding UTF8).Replace('{VERSION}', $version)
 [System.IO.File]::WriteAllText((Join-Path $stage 'manifest.json'), $manifest, $utf8)
 
