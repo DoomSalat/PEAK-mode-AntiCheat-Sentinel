@@ -8,7 +8,7 @@ namespace PeakSentinel.Settings
 
         public DebugSettings(ConfigFile config, string traceFile)
         {
-            TraceFile = config.Bind(Section, "TraceFile", true, $"Write a debug trace to BepInEx/{traceFile}: every item RPC (sender, view owner, arguments), every item created over the network and every finding.");
+            TraceFile = config.Bind(Section, "TraceFile", false, $"Write a debug trace to BepInEx/{traceFile}: every item RPC (sender, view owner, arguments), every item created over the network and every finding.");
             TraceAllRpcs = config.Bind(Section, "TraceAllRpcs", false, "Also write every other RPC to the trace (very noisy, for finding new cheat paths).");
         }
 

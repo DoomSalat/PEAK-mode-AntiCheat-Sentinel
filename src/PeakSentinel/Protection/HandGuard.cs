@@ -13,7 +13,7 @@ namespace PeakSentinel.Protection
         private const float RequestSeconds = 5f;
         private const string UnknownItem = "unknown item";
 
-        private static readonly HashSet<string> OwnRequests = new HashSet<string> { RpcNames.RequestPickup, RpcNames.RequestFakeItemPickup, RpcNames.SpawnItemInHand }; // Static: fixed vanilla requests that end in OnPickupAccepted
+        private static readonly HashSet<string> OwnRequests = new HashSet<string> { RpcNames.RequestPickup, RpcNames.RequestFakeItemPickup, RpcNames.SpawnItemInHand, RpcNames.SpawnAndGrab }; // Static: fixed vanilla requests that end in OnPickupAccepted (SpawnAndGrab: the peel or leftover after eating)
 
         private readonly List<float> _requests = new List<float>();
         private readonly SuspicionReport _report;

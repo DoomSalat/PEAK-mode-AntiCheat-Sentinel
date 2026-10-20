@@ -12,6 +12,7 @@ namespace PeakSentinel.Detection
         private const float SyncSeconds = 2f;
         private const float ExpectedShare = 0.5f;
         private const float MinimumRise = 0.01f;
+        private const float FrozenChange = 0.005f;
         private const string Tag = "ignores poison and other statuses";
 
         private readonly List<Expectation> _pending = new List<Expectation>();
@@ -74,34 +75,60 @@ namespace PeakSentinel.Detection
         private void Expect(Character consumer, Item item, CharacterAfflictions.STATUSTYPE status, float amount, float seconds)
         {
             float before = consumer.refs.afflictions.GetCurrentStatus(status);
-            _pending.Add(new Expectation(consumer, item.GetItemName(), status, before, Mathf.Max(MinimumRise, amount * ExpectedShare), Time.time + seconds));
+            float oppositeBefore = OppositeOf(status) is CharacterAfflictions.STATUSTYPE opposite ? consumer.refs.afflictions.GetCurrentStatus(opposite) : 0f;
+            _pending.Add(new Expectation(consumer, item.GetItemName(), status, before, oppositeBefore, Mathf.Max(MinimumRise, amount * ExpectedShare), Time.time + seconds));
         }
 
         private void Settle(Expectation expectation)
         {
             Character consumer = expectation.Consumer;
 
-            if (consumer == null || consumer.data.dead || consumer.data.isInvincible || _locator.Holds<Peak.HealingAmulet>(consumer) || consumer.refs.afflictions.HasAfflictionType(Peak.Afflictions.Affliction.AfflictionType.HealAll, out _))
+            if (consumer == null || IsProtected(consumer, expectation.Status))
                 return;
 
             float now = consumer.refs.afflictions.GetCurrentStatus(expectation.Status);
+            float cancelled = OppositeOf(expectation.Status) is CharacterAfflictions.STATUSTYPE opposite ? expectation.OppositeBefore - consumer.refs.afflictions.GetCurrentStatus(opposite) : 0f;
+            bool frozen = Mathf.Abs(now - expectation.Before) < FrozenChange && Mathf.Abs(cancelled) < FrozenChange;
 
-            if (now - expectation.Before >= expectation.Rise)
+            if (!frozen || now - expectation.Before + cancelled >= expectation.Rise)
                 return;
 
             PhotonView view = consumer.photonView;
             _report.Tag(view.Owner, Tag);
-            _report.Suspect(view.Owner, FindingCategory.Cheats, $"ate '{expectation.Item}' but their {expectation.Status} did not rise ({expectation.Before * 100f:F0}% → {now * 100f:F0}%), status lock");
+            _report.Suspect(view.Owner, FindingCategory.Cheats, $"ate '{expectation.Item}' but their {expectation.Status} stayed frozen at {now * 100f:F0}%, status lock");
+        }
+
+        private bool IsProtected(Character consumer, CharacterAfflictions.STATUSTYPE status)
+        {
+            if (consumer.data.dead || consumer.data.isInvincible || consumer.data.isSkeleton || consumer.isZombie || consumer.statusesLocked || consumer.inAirport)
+                return true;
+
+            if (status == CharacterAfflictions.STATUSTYPE.Hunger && !consumer.refs.afflictions.canGetHungry)
+                return true;
+
+            return _locator.Holds<Peak.HealingAmulet>(consumer) || consumer.refs.afflictions.HasAfflictionType(Peak.Afflictions.Affliction.AfflictionType.HealAll, out _);
+        }
+
+        private CharacterAfflictions.STATUSTYPE? OppositeOf(CharacterAfflictions.STATUSTYPE status)
+        {
+            if (status == CharacterAfflictions.STATUSTYPE.Hot)
+                return CharacterAfflictions.STATUSTYPE.Cold;
+
+            if (status == CharacterAfflictions.STATUSTYPE.Cold)
+                return CharacterAfflictions.STATUSTYPE.Hot;
+
+            return null;
         }
 
         private sealed class Expectation
         {
-            public Expectation(Character consumer, string item, CharacterAfflictions.STATUSTYPE status, float before, float rise, float due)
+            public Expectation(Character consumer, string item, CharacterAfflictions.STATUSTYPE status, float before, float oppositeBefore, float rise, float due)
             {
                 Consumer = consumer;
                 Item = item;
                 Status = status;
                 Before = before;
+                OppositeBefore = oppositeBefore;
                 Rise = rise;
                 Due = due;
             }
@@ -110,6 +137,7 @@ namespace PeakSentinel.Detection
             public string Item { get; }
             public CharacterAfflictions.STATUSTYPE Status { get; }
             public float Before { get; }
+            public float OppositeBefore { get; }
             public float Rise { get; }
             public float Due { get; }
         }

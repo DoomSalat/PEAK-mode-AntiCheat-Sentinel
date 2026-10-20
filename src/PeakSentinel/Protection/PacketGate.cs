@@ -18,6 +18,11 @@ namespace PeakSentinel.Protection
         private const string DestroyTag = "destroys other players' objects";
         private const float JoinGraceSeconds = 15f;
 
+        private static readonly HashSet<string> FrameSyncMethods = new HashSet<string> // Static: fixed RPCs the game sends every frame while a status or effect changes, never a flood
+        {
+            RpcNames.SyncAfflictions, RpcNames.SyncStatuses, "SyncThornsRPC_Remote",
+        };
+
         private readonly Dictionary<int, (float Start, int Rpcs, int Spawns, int Objects, int Streak, float Reported)> _rates = new Dictionary<int, (float Start, int Rpcs, int Spawns, int Objects, int Streak, float Reported)>();
         private readonly SuspicionReport _report;
         private readonly DetectionSettings _detection;
@@ -57,7 +62,7 @@ namespace PeakSentinel.Protection
             if ((data.Code == PunCodes.SerializeEvent || data.Code == PunCodes.SerializeReliableEvent) && data.CustomData is object[] serialized && serialized.Length > 0 && serialized[0] is int sentAt)
                 _latency.Note(actor, sentAt);
 
-            if (!JustJoined() && !IsCached(data))
+            if (!sender.IsMasterClient && !JustJoined() && !IsCached(data) && !IsFrameSync(data))
                 CountRate(sender, data.Code);
 
             if (data.Code == PunCodes.OwnershipRequestEvent || data.Code == PunCodes.OwnershipTransferEvent)
@@ -80,6 +85,11 @@ namespace PeakSentinel.Protection
             }
 
             return Time.unscaledTime - _joinedAt < JoinGraceSeconds;
+        }
+
+        private bool IsFrameSync(EventData data)
+        {
+            return data.Code == PunCodes.RpcEvent && data.CustomData is Hashtable rpc && FrameSyncMethods.Contains(RpcRouter.MethodOf(rpc) ?? string.Empty);
         }
 
         private bool IsCached(EventData data)

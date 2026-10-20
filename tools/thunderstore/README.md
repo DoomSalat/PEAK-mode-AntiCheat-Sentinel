@@ -54,6 +54,6 @@ In the **Esc menu** a player gets an orange **?** if they behaved strangely and 
 
 Thunderstore Mod Manager or r2modman. Or by hand: put `PeakSentinel.dll` into `BepInEx/plugins/`.
 
-Settings: `BepInEx/config/peaksentinel.cfg`. Debug log: `BepInEx/PeakSentinel.log`.
+Settings: `BepInEx/config/peaksentinel.cfg`. Debug log (off by default, turn on `[Debug] TraceFile`): `BepInEx/PeakSentinel.log`.
 
 Source: [github.com/DoomSalat/PEAK-mode-AntiCheat-Sentinel](https://github.com/DoomSalat/PEAK-mode-AntiCheat-Sentinel)

@@ -69,6 +69,9 @@ namespace PeakSentinel.Detection
             if (victim == null)
                 return true;
 
+            if (_locator.PullsWithRescueHook(call.Sender, victim))
+                return true;
+
             int sender = call.Sender.ActorNumber;
             (int, int) pair = (sender, call.Owner.ActorNumber);
 

@@ -19,6 +19,8 @@ namespace PeakSentinel.Detection
         private const float MaxWorldCoordinate = 100000f;
         private const float NextToPlayer = 3f;
         private const float WarpItemReach = 6f;
+        private const float EatReach = 6f;
+        private const float HungerMargin = 0.05f;
         private const string SelfTeleportTag = "teleports themselves";
 
         private static readonly HashSet<string> Methods = new HashSet<string> // Static: fixed set of RPC names that can harm another player
@@ -59,6 +61,14 @@ namespace PeakSentinel.Detection
             switch (call.Method)
             {
                 case RpcNames.Die:
+                    if (IsCannibalism(call, character))
+                    {
+                        _report.Notice(call.Sender, FindingCategory.Cheats, $"ate {victim} (cannibalism is on for them)");
+                        return true;
+                    }
+
+                    return Refuse(call, KillsTag, $"killed {victim}", Revive(character, victim));
+
                 case RpcNames.SetDead:
                     return Refuse(call, KillsTag, $"killed {victim}", Revive(character, victim));
 
@@ -108,6 +118,17 @@ namespace PeakSentinel.Detection
             return _report.Refuse(call.Sender, FindingCategory.Cheats, SelfTeleportTag, action, block, Return(self, PlayerNames.Name(call.Sender)));
         }
 
+        private bool IsCannibalism(RpcCall call, Character victim)
+        {
+            Character eater = PlayerHandler.GetPlayerCharacter(call.Sender);
+
+            if (victim == null || eater == null || !victim.data.cannibalismPermitted || !eater.data.fullyConscious)
+                return false;
+
+            bool hungry = eater.refs.afflictions.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.Hunger) >= UIPlayerNames.CANNIBAL_HUNGER_THRESHOLD - HungerMargin;
+            return hungry && (eater.Center - victim.Center).sqrMagnitude <= EatReach * EatReach;
+        }
+
         private string WhereTo(Character self, Vector3 destination)
         {
             foreach (Character other in Character.AllCharacters)
@@ -126,7 +147,7 @@ namespace PeakSentinel.Detection
 
         private bool CheckFling(RpcCall call, string victim, float force, Character character)
         {
-            return force < FlingForce || Refuse(call, FlingsTag, $"flung {victim} with force {force:F0}", Return(character, victim));
+            return force < FlingForce || (character != null && _locator.PullsWithRescueHook(call.Sender, character)) || Refuse(call, FlingsTag, $"flung {victim} with force {force:F0}", Return(character, victim));
         }
 
         private bool Refuse(RpcCall call, string tag, string action, Repair repair)

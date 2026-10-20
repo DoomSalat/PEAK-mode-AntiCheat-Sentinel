@@ -26,7 +26,7 @@ namespace PeakSentinel.Detection.Flight
         private DetectionSettings _detection;
         private FlightSettings _settings;
         private FlightExemptions _exemptions;
-        private int _terrainMask;
+        private int _groundMask;
         private float _nextSample;
 
         public void Initialize(SuspicionReport report, DebugTrace trace, DetectionSettings detection, FlightSettings settings, FlightExemptions exemptions)
@@ -36,7 +36,7 @@ namespace PeakSentinel.Detection.Flight
             _detection = detection;
             _settings = settings;
             _exemptions = exemptions;
-            _terrainMask = HelperFunctions.GetMask(HelperFunctions.LayerType.TerrainMap);
+            _groundMask = HelperFunctions.GetMask(HelperFunctions.LayerType.AllPhysicalExceptCharacter);
         }
 
         private void Update()
@@ -169,7 +169,7 @@ namespace PeakSentinel.Detection.Flight
         private float GroundDistance(Character character)
         {
             float radius = _settings.GroundProbeRadius.Value;
-            return Physics.SphereCast(character.Center, radius, Vector3.down, out RaycastHit hit, MaxProbe, _terrainMask) ? hit.distance + radius : MaxProbe;
+            return Physics.SphereCast(character.Center, radius, Vector3.down, out RaycastHit hit, MaxProbe, _groundMask) ? hit.distance + radius : MaxProbe;
         }
     }
 }

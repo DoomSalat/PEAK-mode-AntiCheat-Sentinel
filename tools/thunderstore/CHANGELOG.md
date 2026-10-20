@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.2
+
+- Cannibalism (eating a player who allowed it) is not treated as a kill.
+- Pulling a player with the rescue hook is not treated as a push.
+- Flood ignores the game's per-frame status and effect syncs (for example while a flame or frost berry works) and the host's own traffic.
+- No false flight on rocks, logs, mushrooms and other props: the ground check now sees them.
+- Status lock is reported only when a status stays frozen. Poison wearing off, a flame berry removing cold, a frost berry removing heat and food eaten under protection are fine.
+- Invincibility from the blue healing item used in hand is recognised.
+- The peel you get after eating is no longer taken from your hands.
+- The debug trace file is off by default (turn on [Debug] TraceFile when you need it).
+
 ## 1.0.1
 
 - Flood counts only when a player stays over the limit 3 seconds in a row; short legit game bursts are ignored.
