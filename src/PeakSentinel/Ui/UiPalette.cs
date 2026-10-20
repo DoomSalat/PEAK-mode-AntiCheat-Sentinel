@@ -17,6 +17,8 @@ namespace PeakSentinel.Ui
         public static Color Suspicious { get; } = new Color(0.74f, 0.38f, 0.02f, 1f); // Static: palette
         public static Color Cheat { get; } = new Color(0.62f, 0.1f, 0.07f, 1f); // Static: palette
         public static Color Notice { get; } = new Color(0.45f, 0.37f, 0.27f, 1f); // Static: palette
+        public static Color CheatBright { get; } = new Color(0.95f, 0.18f, 0.12f, 1f); // Static: palette
+        public static Color SuspiciousBright { get; } = new Color(1f, 0.6f, 0.1f, 1f); // Static: palette
         public static Color Clean { get; } = new Color(0.2f, 0.42f, 0.14f, 1f); // Static: palette
     }
 }

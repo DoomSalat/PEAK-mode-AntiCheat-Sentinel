@@ -33,7 +33,7 @@ namespace PeakSentinel.Detection
 
         public bool Inspect(RpcCall call)
         {
-            if (!_detection.HostOnlyEvents.Value || call.Sender == null || call.View == null)
+            if (!_detection.HostOnlyEvents.Value || call.Sender == null || call.View == null || call.FromLocal)
                 return true;
 
             foreach (Rule rule in Rules[call.Method])
@@ -41,7 +41,7 @@ namespace PeakSentinel.Detection
                 if (call.View.GetComponent(rule.Component) == null)
                     continue;
 
-                return IsAllowed(rule, call) || _report.Refuse(call.Sender, FindingCategory.Cheats, WorldTag, Describe(rule, call), _detection.BlockHostOnlyEvents.Value);
+                return IsAllowed(rule, call) || _report.Refuse(call.Sender, FindingCategory.Cheats, WorldTag, Describe(rule, call), _detection.BlockHostOnlyEvents.Value, RepairFor(call));
             }
 
             return true;
@@ -71,6 +71,41 @@ namespace PeakSentinel.Detection
             return rule.NamesTarget ? $"{rule.Action} {PlayerNames.Name(call.Owner)}" : rule.Action;
         }
 
+        private Repair RepairFor(RpcCall call)
+        {
+            switch (call.Method)
+            {
+                case RpcNames.ExtinguishCampfire:
+                    return Relight(call.View, call.Component<Campfire>());
+
+                case RpcNames.StartFog:
+                case RpcNames.SyncFog:
+                    return RestoreFog(call.View, call.Component<OrbFogHandler>());
+
+                default:
+                    return null;
+            }
+        }
+
+        private Repair Relight(PhotonView view, Campfire campfire)
+        {
+            if (campfire == null || campfire.state != Campfire.FireState.Lit || campfire.IsMiniRunEndingCampfire())
+                return null;
+
+            float burning = campfire.beenBurningFor;
+            return new Repair("relit the campfire", () => view.RPC(RpcNames.LightCampfire, RpcTarget.All, false, burning));
+        }
+
+        private Repair RestoreFog(PhotonView view, OrbFogHandler fog)
+        {
+            if (fog == null)
+                return null;
+
+            float size = fog.currentSize;
+            bool moving = fog.isMoving;
+            return new Repair("put the fog back", () => view.RPC(RpcNames.SyncFog, RpcTarget.All, size, moving));
+        }
+
         private bool IsHelicopterLegit(PhotonView view)
         {
             if (Singleton<PeakHandler>.Instance.summonedHelicopter)
@@ -87,7 +122,7 @@ namespace PeakSentinel.Detection
             Add(rules, "DisperseRPC", typeof(BeeSwarm), Sender.Host, "dispersed a bee swarm");
             Add(rules, "SetBeesAngryRPC", typeof(BeeSwarm), Sender.Host, "changed a bee swarm's anger");
             Add(rules, RpcNames.TriggerHelicopter, typeof(Flare), Sender.Host, "triggered the rescue helicopter");
-            Add(rules, "Extinguish_Rpc", typeof(Campfire), Sender.Host, "tried to extinguish a campfire");
+            Add(rules, RpcNames.ExtinguishCampfire, typeof(Campfire), Sender.Host, "tried to extinguish a campfire");
             Add(rules, "RPCEndGame", typeof(Character), Sender.Host, "forced the game to end");
             Add(rules, "RPCEndGame_ForceWin", typeof(Character), Sender.Host, "forced a win");
             Add(rules, "ReviveCharacter", typeof(Character), Sender.Host, "revived", true);
@@ -96,8 +131,8 @@ namespace PeakSentinel.Detection
             Add(rules, "RPCA_SetTarget", typeof(PlayerGhost), Sender.Owner, "controlled the ghost of", true);
             Add(rules, "RPCA_SpawnEruption", typeof(EruptionSpawner), Sender.Host, "spawned a volcano eruption");
             Add(rules, "RPC_GrowVine", typeof(MagicBeanVine), Sender.Host, "grew a magic bean vine");
-            Add(rules, "StartMovingRPC", typeof(OrbFogHandler), Sender.Host, "started the fog");
-            Add(rules, "RPCA_SyncFog", typeof(OrbFogHandler), Sender.Host, "moved the fog");
+            Add(rules, RpcNames.StartFog, typeof(OrbFogHandler), Sender.Host, "started the fog");
+            Add(rules, RpcNames.SyncFog, typeof(OrbFogHandler), Sender.Host, "moved the fog");
             Add(rules, "BeginIslandLoadRPC", typeof(AirportCheckInKiosk), Sender.Host, "started the run from the airport");
             Add(rules, "BeginAirportLoadRPC", typeof(GameOverHandler), Sender.Host, "sent everyone back to the airport");
             Add(rules, "ShakeBridge_Rpc", typeof(BreakableBridge), Sender.Host, "shook a bridge");

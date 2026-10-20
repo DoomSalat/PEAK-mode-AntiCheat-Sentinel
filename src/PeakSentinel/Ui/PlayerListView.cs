@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 using PeakSentinel.Protection;
 using PeakSentinel.Reporting;
@@ -51,7 +52,7 @@ namespace PeakSentinel.Ui
         private int _kickArmedActor;
         private int _banArmedActor;
 
-        public PlayerListView(UiFactory ui, Transform parent, FindingLog findings, FeedFilter filter, BanGuard banGuard, AvatarCache avatars)
+        public PlayerListView(UiFactory ui, Transform parent, FindingLog findings, FeedFilter filter, BanGuard banGuard, AvatarCache avatars, Action<FindingLog.Finding> fix)
         {
             _avatars = avatars;
             _ui = ui;
@@ -77,7 +78,7 @@ namespace PeakSentinel.Ui
             _profileFace = ui.Icon(status, ui.Faces.Clean, FaceSize);
             _profileProblems = ui.Label(status, string.Empty, LineSize, UiPalette.Clean, false);
             ui.Flexible(_profileProblems, 1f, 0f);
-            _profileFeed = new FindingFeed(ui, profile, null, false);
+            _profileFeed = new FindingFeed(ui, profile, null, false, fix);
             _profile.SetActive(false);
         }
 
@@ -99,7 +100,7 @@ namespace PeakSentinel.Ui
             _shownRows = signature;
 
             for (int i = _rows.childCount - 1; i >= 0; i--)
-                Object.Destroy(_rows.GetChild(i).gameObject);
+                UnityEngine.Object.Destroy(_rows.GetChild(i).gameObject);
 
             if (!PhotonNetwork.InRoom)
             {

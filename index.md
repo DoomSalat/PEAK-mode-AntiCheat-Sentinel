@@ -6,6 +6,7 @@
 ```
 SentinelPlugin                          — composition root: настройки, отчёт, аудиты, хост-объект, Harmony
 ├── Patches/NetworkPatches              — ExecuteRpc → RpcRouter; NetworkInstantiate → InstantiateAudit; PhotonView.RPC → HandGuard; курсор окна
+├── Patches/PauseMenuPatches            — PlayerUI.Initialize → StandingBadge на аватарке в меню Esc
 ├── Patches/EnvironmentPatches          — AntiSphere / WindChillZone / PlayerMoveZone помечают персонажей для FlightExemptions
 ├── Network/RpcRouter                   — разбирает RPC в RpcCall, пишет трассу, опрашивает все IRpcAudit
 │   ├── Detection/ItemRpcAudit          — выдача и подмена предметов
@@ -21,6 +22,7 @@ SentinelPlugin                          — composition root: настройки
 │   ├── FlightTrack, HorizontalSpeed    — история высот и пути
 │   └── FlightExemptions                — законные причины быть в воздухе (RopeLinks, EnvironmentMarks)
 ├── Protection/BanGuard + BanList       — постоянный бан
+├── Protection/HostGuard                — захват хоста: запись, возврат, кик
 ├── Reporting/SuspicionReport           — запись находки: BepInEx-лог, DebugTrace, FindingLog, лента подключений
 └── Ui/SentinelWindow                   — окно F6 (Back)
     ├── HotkeyButton, SettingsBinder, FeedOptions, FindingFeed, PlayerListView
@@ -51,8 +53,8 @@ SentinelPlugin                          — composition root: настройки
 | Class | File | Role |
 |---|---|---|
 | ItemRpcAudit | Detection/ItemRpcAudit.cs | Правила предметов (таблица ниже); блок у хоста при BlockCheatSpawns, свои запросы хоста не блокируются при AllowMySpawns |
-| HarmAudit | Detection/HarmAudit.cs | Отправитель не владелец персонажа и не хост: Die/SetDead — убил, PassOut — обморок, Zombify/Petrify, WarpPlayerRPC — телепорт, сила ≥ 1500 — рывок (законные удары до ~500). RPCA_Fall не проверяется — его законно шлют чужие клиенты |
-| WorldAudit | Detection/WorldAudit.cs | Таблица как в PEAKER (метод → компонент на view, кто вправе: хост / владелец / жертва): банан, пчёлы, вертолёт (кроме законного), костёр, конец игры, воскрешение, призрак, извержение, лиана, туман, старт/возврат, мосты, верёвки, сосульки, крюки |
+| HarmAudit | Detection/HarmAudit.cs | Свои RPC не проверяет (это наши починки). Починки: убийство — `RPCA_ReviveAtPosition` в месте смерти, обморок — `RPCA_UnPassOut`, телепорт и рывок — `WarpPlayerRPC` туда, где жертва стояла перед атакой; зомби/окаменение — без починки. Отправитель не владелец персонажа и не хост: Die/SetDead — убил, PassOut — обморок, Zombify/Petrify, WarpPlayerRPC — телепорт, сила ≥ 1500 — рывок (законные удары до ~500). RPCA_Fall не проверяется — его законно шлют чужие клиенты |
+| WorldAudit | Detection/WorldAudit.cs | Свои RPC не проверяет. Починки: потушенный костёр — `Light_Rpc` с прежним временем горения (кроме костра конца мини-забега), туман — `RPCA_SyncFog` с прежними размером и движением; вертолёт, конец игры, мосты, верёвки — без починки. Таблица как в PEAKER (метод → компонент на view, кто вправе: хост / владелец / жертва): банан, пчёлы, вертолёт (кроме законного), костёр, конец игры, воскрешение, призрак, извержение, лиана, туман, старт/возврат, мосты, верёвки, сосульки, крюки |
 | EffectAudit | Detection/EffectAudit.cs | MonoBehaviour + IRpcAudit. `Consume(consumerID)` от любого — запоминает, кто что съел; `SyncAfflictionsRPC(data, newType)` от владельца с новым эффектом Invincibility (молоко, амулет, гриб), BingBongShield или InfiniteStamina — ищет источник: щит — золотой Bing Bong (BingBongShieldWhileHolding) в руке сейчас; остальное — съедено что-то в пределах 5 с (решение через 2 с: «съел» может прийти позже эффекта). Нет источника — подозрение «got X with no source», метка; строка EFFECT в трассе с названием съеденного |
 | InstantiateAudit | Detection/InstantiateAudit.cs | Опасные префабы не от хоста (BeeSwarm, Tornado, Bingbong_*) — не создаются при BlockDangerousSpawns; предмет, созданный не хостом: есть в слотах — notice, нет — подозрение (ниже y −400 — визуал рюкзака, пропуск) |
 | FlightExemptions | Detection/Flight/FlightExemptions.cs | Лазание, несут/держат/кондор, без сознания, шарики, планер/зонтик, LowGravity, зоны (EnvironmentMarks, 1,5 с), Rope Carabiner (RopeLinks: свойства комнаты `rkb.link.*`), стоит на игроке |
@@ -63,24 +65,30 @@ SentinelPlugin                          — composition root: настройки
 |---|---|---|
 | HandGuard | Protection/HandGuard.cs | Не хост: свои RequestPickup / RPC_RequestFakeItemPickup / RPC_SpawnItemInHandMaster запоминаются на 5 с (патч PhotonView.RPC); OnPickupAccepted без такого запроса — не брать в руку и очистить слот (RefuseForcedPickups) |
 | KickShield | Protection/KickShield.cs | RPCA_Kick запоминает пинающего на 2 с; его RPCA_Fall / RPCA_AddForceAtPosition по тебе отменяются (IgnoreKicks; с AllowHonestKicks — только при выключенных пинках в забеге); при выключенных пинках в забеге каждый пинок — находка; при защите всех упавшему шлётся RPCA_UnFall — только при выключенных пинках, а с ShieldEveryoneInKickMode и при честных пинках |
+| HostGuard | Protection/HostGuard.cs | Подписка на события Photon (OnEnable/OnDisable): PropertiesChanged с ключом MasterClientId от игрока, который не был хостом, пока прежний хост ещё в комнате, — захват (так делают только читы, сервер Photon принимает смену хоста от любого и запретить её нельзя). Всем Sentinel-клиентам — находка Cheats «took the host from X», метка «steals the host». Если хостом был ты и ReclaimHost — сразу `SetMasterClient(себя)` (BLOCKED «taken back»), при KickHostThieves — кик вора, как только хост снова твой |
 | BanList | Protection/BanList.cs | Файл `BepInEx/config/PeakSentinel.bans.txt`, строка «UserId\tник» |
 
 ### Reporting
 | Class | File | Role | Key API |
 |---|---|---|---|
-| SuspicionReport | Reporting/SuspicionReport.cs | Одна точка записи находки | `Flag` (чит), `Suspect` (эвристика), `Refuse(culprit, category, tag, action, block) → allowed`, `Notice`, `Tag` |
+| SuspicionReport | Reporting/SuspicionReport.cs | Одна точка записи находки | `Flag` (чит), `Suspect` (эвристика, к тексту дописывается «(heuristic, may be wrong)»), `Refuse(culprit, category, tag, action, block, repair) → allowed`, `Notice`, `Tag`, `Fix(finding)` — применить починку, отметить находку Fixed, добавить у себя зелёную строку «fix: …» (видна только тому, кто починил; другие Sentinel-клиенты честно видят его RPC как вмешательство) |
 | FindingLog | Reporting/FindingLog.cs | Последние MaxLogEntries находок, метки и счётчики игроков | `Version, Count, Capacity, Resize, ProblemsOf, StandingOf` |
-| FindingKind / FindingCategory / PlayerStanding | Reporting/ | Notice, Suspicious, Cheat, Blocked / Items, Cheats, Other / Clean, Suspect, Cheater | |
+| Repair | Reporting/Repair.cs | Починка, привязанная к находке в момент детекта: подпись («revived X where they died») и действие (RPC всем) | `Action`, `Apply()` |
+| FindingKind / FindingCategory / PlayerStanding | Reporting/ | Notice, Suspicious, Cheat, Blocked, Fix / Items, Cheats, Other / Clean, Suspect, Cheater | |
 | PlayerNames | Reporting/PlayerNames.cs | Ник и номер игрока | `Name(p)`, `Actor(p)` |
 | DebugTrace | Reporting/DebugTrace.cs | `BepInEx/PeakSentinel.log`: RPC, INSTANTIATE, FLIGHT, STAMINA, EFFECT, находки | |
 
 ### View
 | Class | File | Role |
 |---|---|---|
+| ScopeHint, HintScope | Ui/ScopeHint.cs | Текст строки-подсказки «If on: … → кого защищает» по текущей роли (хост / не хост) |
+| GameFonts | Ui/GameFonts.cs | Шрифт игры (FontFallbackSwapper.mainBaseFont, иначе TMP_Settings.defaultFontAsset) для окна и меток Esc |
+| RichText | Ui/RichText.cs | `Paint(text, color)`, `Warning(text)` — оранжевая пометка в подписи галочки (эвристика, подозрительно для других античитов) |
 | UiFactory, UiPalette, CardSprites, FaceSprites | Ui/ | Canvas 1920×1080, элементы в стиле ItemSpawnerPremium (пергамент, скругления генерируются кодом), шрифт игры (FontFallbackSwapper.mainBaseFont), смайлики статуса |
+| StandingBadge | Ui/StandingBadge.cs | Метка в правом верхнем углу аватарки игрока в меню Esc (PlayerUI): оранжевый «?» — подозрения (Suspect), пульсирующий (DOTween) красный «!» — чит или блок (Cheater, приоритет выше); шрифт игры, без обводки и тени; рамка — дочерний объект аватарки, отражение аватарки по Y компенсируется |
 | HotkeyButton | Ui/HotkeyButton.cs | Кнопка «Window key: F6» в шапке: клик → «Press a key... (Esc cancels)» → любая клавиша становится [Manager] ToggleKey |
-| SettingsBinder | Ui/SettingsBinder.cs | Галочки ↔ ConfigEntry, пара «проверка + вторая галочка справа» (BindPair), зависимые галочки (гаснут), пометки «только у хоста» |
-| FeedOptions / FeedFilter / FindingFeed | Ui/ | Show notices, Follow newest, поиск (общий для вкладок), Clear; лента кусками по 40 строк (лимит вершин TMP), цвет по виду находки, тексты в `<noparse>` |
+| SettingsBinder | Ui/SettingsBinder.cs | Галочки ↔ ConfigEntry, пара «проверка + вторая галочка справа» (BindPair), строка-подсказка под галочкой (Hint, HintScope): «If on: <что будет>» + ярлык охвата по текущей роли — зелёный «protects everyone», «protects only you», «only writes to the log», оранжевый «does nothing now: you are not the host», «not needed while you are the host»; не хосту у функций, которые как хост защищают всех, дописывается зелёное «(as host: protects everyone)»; обновляется вместе с галочками, зависимые галочки (гаснут), пометки «только у хоста» |
+| FeedOptions / FeedFilter / FindingFeed | Ui/ | Show notices, Follow newest, поиск (общий для вкладок), Clear; лента кусками по 40 строк (лимит вершин TMP), цвет по виду находки, тексты в `<noparse>`; находка с починкой — отдельная строка с кнопкой Fix (не хосту — второе нажатие «Not host! Fix?»), после — «Fixed» |
 | PlayerListView, AvatarCache | Ui/ | Строки игроков (аватарка Steam, смайлик и цвет статуса, Kick/Ban с подтверждением), профиль с лентой игрока |
 | Pages: LogPage, ItemsPage, CheatsPage, OtherPage, PlayersPage, BansPage | Ui/Pages/ | Вкладки окна (ITabPage), общий PageContext, FeedSection = опции + лента |
 
@@ -90,7 +98,7 @@ SentinelPlugin                          — composition root: настройки
 | ManagerSettings | [Manager] | ToggleKey (F6), MaxLogEntries (500, 50–5000) |
 | ProtectionSettings | [Protection] | BlockCheatSpawns, AllowMySpawns, RefuseForcedPickups (все вкл.) |
 | DetectionSettings | [Cheat detection] | HarmToOthers + BlockHarmToOthers, HostOnlyEvents + BlockHostOnlyEvents, DangerousSpawns + BlockDangerousSpawns, Flight + BlockFlight (выкл.), Stamina, SourcelessEffects (оба без блока), CheatModMarkers + KickCheatModUsers |
-| OtherSettings | [Other] | IgnoreKicks (+ AllowHonestKicks: сама выключается при включённых пинках в забеге) → ShieldEveryoneFromKicks → ShieldEveryoneInKickMode / ShieldEveryoneFromKicksAsClient (цепочка, все выкл.) |
+| OtherSettings | [Other] | ReclaimHost (вкл.) + KickHostThieves (выкл.); IgnoreKicks (+ AllowHonestKicks: сама выключается при включённых пинках в забеге) → ShieldEveryoneFromKicks → ShieldEveryoneInKickMode / ShieldEveryoneFromKicksAsClient (цепочка, все выкл.) |
 | StaminaSettings | [Stamina] | FlagSeconds 4, MinDrop 0.02, MinSprintSpeed 3, TraceSamples |
 | FlightSettings | [Flight] | MinGroundDistance, GroundProbeRadius (0.5), WindowSeconds, MaxGravityDrop, FastFallSpeed, FlagSeconds, MaxRunSpeed, SpeedWindowSeconds, SpeedFlagSeconds, TraceSamples |
 | DebugSettings | [Debug] | TraceFile, TraceAllRpcs |
@@ -111,6 +119,7 @@ FlightAudit.Update → FlightExemptions + FlightTrack → SuspicionReport.Suspec
 | Сетевое создание объекта | `PhotonNetwork.NetworkInstantiate` | InstantiateAudit |
 | Клавиша окна | SentinelWindow.Update | открыть/закрыть или захват клавиши |
 | Таймеры | FlightAudit, StaminaAudit, CheatModScan, BanGuard | сами |
+| Событие Photon PropertiesChanged | NetworkingClient.EventReceived | HostGuard |
 
 ## Cross-Feature Connections
 | This feature uses | From | Via |

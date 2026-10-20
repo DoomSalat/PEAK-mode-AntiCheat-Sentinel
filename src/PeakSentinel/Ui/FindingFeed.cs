@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using PeakSentinel.Reporting;
+using Photon.Pun;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,28 +14,34 @@ namespace PeakSentinel.Ui
     {
         private const int LinesPerChunk = 40;
         private const float FontSize = 19f;
+        private const float FixWidth = 190f;
         private const string TimeFormat = "HH:mm:ss";
         private const string Empty = "no findings yet";
         private const string NothingFound = "nothing matches the search";
         private const string NoParseTag = "</?noparse>";
+        private const string FixLabel = "Fix";
+        private const string ConfirmFixLabel = "Not host! Fix?";
+        private const string FixedLabel = "Fixed";
 
         private static readonly Regex NoParse = new Regex(NoParseTag, RegexOptions.IgnoreCase | RegexOptions.Compiled); // Static: one compiled pattern for every feed
 
-        private readonly List<TextMeshProUGUI> _chunks = new List<TextMeshProUGUI>();
-        private readonly List<string> _texts = new List<string>();
+        private readonly List<(string Text, FindingLog.Finding Fixable)> _blocks = new List<(string Text, FindingLog.Finding Fixable)>();
         private readonly StringBuilder _builder = new StringBuilder();
         private readonly UiFactory _ui;
         private readonly ScrollRect _scroll;
         private readonly RectTransform _content;
         private readonly FindingCategory? _category;
         private readonly bool _searchable;
-        private (int Version, bool Notices, int Actor, string Search) _shown = (-1, false, -1, null);
+        private readonly Action<FindingLog.Finding> _fix;
+        private (int Version, bool Notices, int Actor, string Search, bool Host) _shown = (-1, false, -1, null, false);
+        private FindingLog.Finding _armed;
 
-        public FindingFeed(UiFactory ui, Transform parent, FindingCategory? category, bool searchable)
+        public FindingFeed(UiFactory ui, Transform parent, FindingCategory? category, bool searchable, Action<FindingLog.Finding> fix)
         {
             _ui = ui;
             _category = category;
             _searchable = searchable;
+            _fix = fix;
             (_scroll, _content) = ui.Scroll(parent, 0f);
         }
 
@@ -43,7 +50,7 @@ namespace PeakSentinel.Ui
         public void Show(FindingLog log, FeedFilter filter)
         {
             string search = _searchable ? filter.Search.Trim() : string.Empty;
-            (int Version, bool Notices, int Actor, string Search) wanted = (log.Version, filter.ShowNotices, Actor, search);
+            (int Version, bool Notices, int Actor, string Search, bool Host) wanted = (log.Version, filter.ShowNotices, Actor, search, PhotonNetwork.IsMasterClient);
 
             if (wanted != _shown)
             {
@@ -57,7 +64,7 @@ namespace PeakSentinel.Ui
 
         private void Rebuild(FindingLog log, bool notices, string search)
         {
-            _texts.Clear();
+            _blocks.Clear();
             _builder.Clear();
             int lines = 0;
 
@@ -66,29 +73,69 @@ namespace PeakSentinel.Ui
                 if ((Actor != 0 && finding.Actor != Actor) || (_category.HasValue && finding.Category != _category.Value) || (finding.Kind == FindingKind.Notice && !notices) || !Matches(finding, search))
                     continue;
 
-                AppendLine(finding);
+                lines++;
 
-                if (++lines % LinesPerChunk == 0)
+                if (finding.Repair != null)
+                {
+                    Flush();
+                    _blocks.Add((LineOf(finding), finding));
+                    continue;
+                }
+
+                if (_builder.Length > 0)
+                    _builder.Append('\n');
+
+                _builder.Append(LineOf(finding));
+
+                if (lines % LinesPerChunk == 0)
                     Flush();
             }
 
             Flush();
 
             if (lines == 0)
-                _texts.Add($"<color=#{ColorUtility.ToHtmlStringRGB(UiPalette.Notice)}>{(search.Length > 0 ? NothingFound : Empty)}</color>");
+                _blocks.Add((RichText.Paint(search.Length > 0 ? NothingFound : Empty, UiPalette.Notice), null));
 
-            for (int i = 0; i < _texts.Count; i++)
-                Chunk(i).text = _texts[i];
+            for (int i = _content.childCount - 1; i >= 0; i--)
+                UnityEngine.Object.Destroy(_content.GetChild(i).gameObject);
 
-            for (int i = 0; i < _chunks.Count; i++)
+            foreach ((string text, FindingLog.Finding fixable) in _blocks)
             {
-                if (i < _texts.Count)
-                    _chunks[i].gameObject.SetActive(true);
+                if (fixable == null)
+                    _ui.Label(_content, text, FontSize, UiPalette.Text, true);
                 else
-                    _chunks[i].gameObject.SetActive(false);
+                    AddFixRow(text, fixable);
             }
 
             LayoutRebuilder.ForceRebuildLayoutImmediate(_content);
+        }
+
+        private void AddFixRow(string text, FindingLog.Finding finding)
+        {
+            RectTransform row = _ui.Row(_content, 10f);
+            _ui.Flexible(_ui.Label(row, text, FontSize, UiPalette.Text, true), 1f, 0f);
+            string label = finding.Fixed ? FixedLabel : finding == _armed ? ConfirmFixLabel : FixLabel;
+            (Button button, TextMeshProUGUI _) = _ui.Button(row, label, FixWidth, FontSize, () => Press(finding));
+            button.interactable = !finding.Fixed;
+        }
+
+        private void Press(FindingLog.Finding finding)
+        {
+            if (!PhotonNetwork.IsMasterClient && _armed != finding)
+            {
+                _armed = finding;
+                _shown = (-1, false, -1, null, false);
+                return;
+            }
+
+            _armed = null;
+            _fix(finding);
+        }
+
+        private string LineOf(FindingLog.Finding finding)
+        {
+            string who = Actor == 0 ? $"{finding.Name}: " : string.Empty;
+            return RichText.Paint($"[{finding.Time.ToString(TimeFormat)}] <noparse>{NoParse.Replace(who + finding.Text, string.Empty)}</noparse>", ColorOf(finding.Kind));
         }
 
         private bool Matches(FindingLog.Finding finding, string search)
@@ -96,30 +143,13 @@ namespace PeakSentinel.Ui
             return search.Length == 0 || finding.Name.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0 || finding.Text.IndexOf(search, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        private void AppendLine(FindingLog.Finding finding)
-        {
-            if (_builder.Length > 0)
-                _builder.Append('\n');
-
-            string who = Actor == 0 ? $"{finding.Name}: " : string.Empty;
-            _builder.Append($"<color=#{ColorUtility.ToHtmlStringRGB(ColorOf(finding.Kind))}>[{finding.Time.ToString(TimeFormat)}] <noparse>{NoParse.Replace(who + finding.Text, string.Empty)}</noparse></color>");
-        }
-
         private void Flush()
         {
             if (_builder.Length == 0)
                 return;
 
-            _texts.Add(_builder.ToString());
+            _blocks.Add((_builder.ToString(), null));
             _builder.Clear();
-        }
-
-        private TextMeshProUGUI Chunk(int index)
-        {
-            while (_chunks.Count <= index)
-                _chunks.Add(_ui.Label(_content, string.Empty, FontSize, UiPalette.Text, true));
-
-            return _chunks[index];
         }
 
         private Color ColorOf(FindingKind kind)
@@ -132,6 +162,9 @@ namespace PeakSentinel.Ui
 
                 case FindingKind.Suspicious:
                     return UiPalette.Suspicious;
+
+                case FindingKind.Fix:
+                    return UiPalette.Clean;
 
                 default:
                     return UiPalette.Notice;

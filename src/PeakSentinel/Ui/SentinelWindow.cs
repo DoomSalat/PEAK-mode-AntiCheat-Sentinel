@@ -36,6 +36,7 @@ namespace PeakSentinel.Ui
         private DetectionSettings _detection;
         private OtherSettings _other;
         private FindingLog _findings;
+        private SuspicionReport _report;
         private BanList _bans;
         private BanGuard _banGuard;
         private UiFactory _ui;
@@ -47,8 +48,9 @@ namespace PeakSentinel.Ui
 
         public bool IsOpen { get; private set; }
 
-        public void Initialize(string title, ManagerSettings manager, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, FindingLog findings, BanList bans, BanGuard banGuard)
+        public void Initialize(string title, ManagerSettings manager, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, FindingLog findings, SuspicionReport report, BanList bans, BanGuard banGuard)
         {
+            _report = report;
             _title = title;
             _manager = manager;
             _protection = protection;
@@ -91,7 +93,7 @@ namespace PeakSentinel.Ui
 
         private void Open()
         {
-            TMP_FontAsset font = GameFont();
+            TMP_FontAsset font = GameFonts.Main();
 
             if (_canvas == null || _ui.Font != font)
                 Build(font);
@@ -129,7 +131,7 @@ namespace PeakSentinel.Ui
 
             RectTransform body = _ui.Column(layout, 0f, new RectOffset(0, 0, 0, 0));
             _ui.Flexible(body, 1f, 1f);
-            PageContext context = new PageContext(_ui, _binder, _filter, _findings, Refresh);
+            PageContext context = new PageContext(_ui, _binder, _filter, _findings, Refresh, Fix);
             AddPage(body, page => new LogPage(context, page));
             AddPage(body, page => new ItemsPage(context, page, _protection));
             AddPage(body, page => new CheatsPage(context, page, _detection));
@@ -192,10 +194,10 @@ namespace PeakSentinel.Ui
             _pages[_tab].Page.Refresh();
         }
 
-        private TMP_FontAsset GameFont()
+        private void Fix(FindingLog.Finding finding)
         {
-            FontFallbackSwapper swapper = FontFallbackSwapper.instance;
-            return swapper != null && swapper.mainBaseFont != null ? swapper.mainBaseFont : TMP_Settings.defaultFontAsset;
+            _report.Fix(finding);
+            Refresh();
         }
 
         private void EnsureEventSystem()

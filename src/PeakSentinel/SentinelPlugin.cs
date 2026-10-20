@@ -19,7 +19,7 @@ namespace PeakSentinel
     {
         public const string Guid = "peaksentinel";
         public const string Name = "Peak Sentinel";
-        public const string Version = "0.1.3";
+        public const string Version = "0.2.0";
 
         private const string TraceFile = "PeakSentinel.log";
         private const string BansFile = "PeakSentinel.bans.txt";
@@ -38,19 +38,21 @@ namespace PeakSentinel
             _trace = new DebugTrace(Path.Combine(Paths.BepInExRootPath, TraceFile), debug.TraceFile, debug.TraceAllRpcs);
             FindingLog findings = new FindingLog(manager.LogEntries);
             SuspicionReport report = new SuspicionReport(Logger, _trace, findings);
+            SentinelHooks.Findings = findings;
             BanList bans = new BanList(Path.Combine(Paths.ConfigPath, BansFile));
             GameObject host = new GameObject(Name) { hideFlags = HideFlags.HideAndDontSave };
             DontDestroyOnLoad(host);
             EffectAudit effects = host.AddComponent<EffectAudit>();
             effects.Initialize(report, _trace, detection);
             WireNetwork(report, protection, detection, other, effects);
+            host.AddComponent<HostGuard>().Initialize(report, other);
             BanGuard banGuard = host.AddComponent<BanGuard>();
             banGuard.Initialize(report, bans);
             host.AddComponent<CheatModScan>().Initialize(report, detection);
             host.AddComponent<FlightAudit>().Initialize(report, _trace, detection, new FlightSettings(Config), new FlightExemptions(new RopeLinks(), SentinelHooks.Environment));
             host.AddComponent<StaminaAudit>().Initialize(report, _trace, detection, new StaminaSettings(Config));
             SentinelWindow window = host.AddComponent<SentinelWindow>();
-            window.Initialize($"{Name} {Version}", manager, protection, detection, other, findings, bans, banGuard);
+            window.Initialize($"{Name} {Version}", manager, protection, detection, other, findings, report, bans, banGuard);
             SentinelHooks.Window = window;
 
             _harmony = new Harmony(Guid);

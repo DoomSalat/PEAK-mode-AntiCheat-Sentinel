@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BepInEx.Configuration;
 using Photon.Pun;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,10 +14,12 @@ namespace PeakSentinel.Ui
         private const float DisabledAlpha = 0.45f;
         private const float IndentStep = 38f;
         private const string HostOnly = "Blocking and kick work only while you are the host";
+        private const float HintSize = 16f;
 
         private readonly List<(Toggle Toggle, ConfigEntry<bool> Entry)> _bindings = new List<(Toggle Toggle, ConfigEntry<bool> Entry)>();
         private readonly List<(Toggle Toggle, CanvasGroup Group, Func<bool> Enabled)> _dependents = new List<(Toggle Toggle, CanvasGroup Group, Func<bool> Enabled)>();
         private readonly List<GameObject> _hostNotes = new List<GameObject>();
+        private readonly List<(TextMeshProUGUI Label, string Effect, Func<bool, HintScope> Scope)> _hints = new List<(TextMeshProUGUI Label, string Effect, Func<bool, HintScope> Scope)>();
         private readonly UiFactory _ui;
 
         public SettingsBinder(UiFactory ui)
@@ -55,6 +58,15 @@ namespace PeakSentinel.Ui
             _dependents.Add((toggle, toggle.GetComponent<CanvasGroup>(), enabled));
         }
 
+        public void Hint(Transform parent, int level, string effect, Func<bool, HintScope> scope)
+        {
+            RectTransform row = _ui.Row(parent, 0f);
+            _ui.Fixed(_ui.Row(row, 0f), IndentStep * (level + 1), 0f);
+            TextMeshProUGUI label = _ui.Label(row, string.Empty, HintSize, UiPalette.Notice, true);
+            _ui.Flexible(label, 1f, 0f);
+            _hints.Add((label, effect, scope));
+        }
+
         public void HostNote(Transform parent)
         {
             _hostNotes.Add(_ui.Label(parent, HostOnly, TextSize, UiPalette.Suspicious, false).gameObject);
@@ -71,6 +83,9 @@ namespace PeakSentinel.Ui
                 toggle.interactable = active;
                 group.alpha = active ? 1f : DisabledAlpha;
             }
+
+            foreach ((TextMeshProUGUI label, string effect, Func<bool, HintScope> scope) in _hints)
+                label.text = ScopeHint.Text(effect, scope);
 
             foreach (GameObject note in _hostNotes)
             {

@@ -10,6 +10,7 @@ namespace PeakSentinel.Patches
     public static class SentinelHooks // Static: Harmony patches are static and reach the mod only through statics
     {
         public static SuspicionReport Report { get; set; } // Set: assigned once by SentinelPlugin
+        public static FindingLog Findings { get; set; } // Set: assigned once by SentinelPlugin, read by the pause menu badges
         public static RpcRouter Router { get; set; } // Set: assigned once by SentinelPlugin
         public static InstantiateAudit Instantiate { get; set; } // Set: assigned once by SentinelPlugin
         public static HandGuard Hands { get; set; } // Set: assigned once by SentinelPlugin, told about own outgoing pickup requests

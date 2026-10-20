@@ -26,6 +26,12 @@ namespace PeakSentinel.Network
         public const string TriggerHelicopter = "TriggerHelicopter";
         public const string TriggerBanana = "RPCA_TriggerBanana";
         public const string Consume = "Consume";
+        public const string ReviveAtPosition = "RPCA_ReviveAtPosition";
+        public const string UnPassOut = "RPCA_UnPassOut";
+        public const string LightCampfire = "Light_Rpc";
+        public const string ExtinguishCampfire = "Extinguish_Rpc";
+        public const string StartFog = "StartMovingRPC";
+        public const string SyncFog = "RPCA_SyncFog";
         public const string SyncAfflictions = "SyncAfflictionsRPC";
     }
 }

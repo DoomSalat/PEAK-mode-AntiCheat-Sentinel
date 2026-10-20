@@ -25,9 +25,9 @@ namespace PeakSentinel.Reporting
         public int Count => _findings.Count;
         public int Capacity => _capacity.Value;
 
-        public void Add(int actor, string name, string text, FindingKind kind, FindingCategory category)
+        public void Add(int actor, string name, string text, FindingKind kind, FindingCategory category, Repair repair = null)
         {
-            _findings.Add(new Finding(DateTime.Now, actor, name, text, kind, category));
+            _findings.Add(new Finding(DateTime.Now, actor, name, text, kind, category, repair));
             Version++;
 
             Trim();
@@ -40,6 +40,12 @@ namespace PeakSentinel.Reporting
                 record.Cheats++;
             else if (kind == FindingKind.Blocked)
                 record.Blocked++;
+        }
+
+        public void MarkFixed(Finding finding)
+        {
+            finding.Fixed = true;
+            Version++;
         }
 
         public void Resize(int capacity)
@@ -122,10 +128,11 @@ namespace PeakSentinel.Reporting
             text.Append(part);
         }
 
-        public readonly struct Finding
+        public sealed class Finding
         {
-            public Finding(DateTime time, int actor, string name, string text, FindingKind kind, FindingCategory category)
+            public Finding(DateTime time, int actor, string name, string text, FindingKind kind, FindingCategory category, Repair repair)
             {
+                Repair = repair;
                 Time = time;
                 Actor = actor;
                 Name = name;
@@ -140,6 +147,8 @@ namespace PeakSentinel.Reporting
             public string Text { get; }
             public FindingKind Kind { get; }
             public FindingCategory Category { get; }
+            public Repair Repair { get; }
+            public bool Fixed { get; set; } // Set: FindingLog.MarkFixed after the repair was sent
         }
 
         private sealed class PlayerRecord

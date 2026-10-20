@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using BepInEx.Logging;
+using Photon.Pun;
 using UnityEngine;
 using PhotonPlayer = Photon.Realtime.Player;
 
@@ -14,6 +15,9 @@ namespace PeakSentinel.Reporting
         private const string BlockedLevel = "BLOCKED";
         private const string NoticeLevel = "notice";
         private const string BlockedPrefix = "blocked: ";
+        private const string FixLevel = "FIX";
+        private const string FixPrefix = "fix: ";
+        private const string UnsureNote = " (heuristic, may be wrong)";
 
         private readonly ManualLogSource _log;
         private readonly DebugTrace _trace;
@@ -29,21 +33,34 @@ namespace PeakSentinel.Reporting
 
         public PlayerConnectionLog Feed { get; set; } // Set: remembered by the connection log patch once the HUD wakes up
 
-        public void Flag(PhotonPlayer culprit, FindingCategory category, string action, bool blocked = false)
+        public void Flag(PhotonPlayer culprit, FindingCategory category, string action, bool blocked = false, Repair repair = null)
         {
-            Report(culprit, category, action, blocked ? FindingKind.Blocked : FindingKind.Cheat);
+            Report(culprit, category, action, blocked ? FindingKind.Blocked : FindingKind.Cheat, repair);
         }
 
         public void Suspect(PhotonPlayer culprit, FindingCategory category, string action, bool blocked = false)
         {
-            Report(culprit, category, action, blocked ? FindingKind.Blocked : FindingKind.Suspicious);
+            Report(culprit, category, action + UnsureNote, blocked ? FindingKind.Blocked : FindingKind.Suspicious, null);
         }
 
-        public bool Refuse(PhotonPlayer culprit, FindingCategory category, string tag, string action, bool block)
+        public bool Refuse(PhotonPlayer culprit, FindingCategory category, string tag, string action, bool block, Repair repair = null)
         {
             Tag(culprit, tag);
-            Flag(culprit, category, action, block);
+            Flag(culprit, category, action, block, repair);
             return !block;
+        }
+
+        public void Fix(FindingLog.Finding finding)
+        {
+            if (finding.Repair == null || finding.Fixed)
+                return;
+
+            finding.Repair.Apply();
+            _findings.MarkFixed(finding);
+            string text = FixPrefix + finding.Repair.Action;
+            _log.LogInfo($"{FixLevel} {text} (after: {finding.Name} {finding.Text})");
+            _trace.Finding(FixLevel, PhotonNetwork.LocalPlayer, text);
+            _findings.Add(PlayerNames.Actor(PhotonNetwork.LocalPlayer), PlayerNames.Name(PhotonNetwork.LocalPlayer), text, FindingKind.Fix, finding.Category);
         }
 
         public void Notice(PhotonPlayer culprit, FindingCategory category, string action)
@@ -58,14 +75,14 @@ namespace PeakSentinel.Reporting
             _findings.Tag(PlayerNames.Actor(culprit), tag);
         }
 
-        private void Report(PhotonPlayer culprit, FindingCategory category, string action, FindingKind kind)
+        private void Report(PhotonPlayer culprit, FindingCategory category, string action, FindingKind kind, Repair repair)
         {
             string name = PlayerNames.Name(culprit);
             string level = LevelOf(kind);
             string text = kind == FindingKind.Blocked ? BlockedPrefix + action : action;
             _log.LogWarning($"{level} {name} (actor {PlayerNames.Actor(culprit)}): {action}");
             _trace.Finding(level, culprit, action);
-            _findings.Add(PlayerNames.Actor(culprit), name, text, kind, category);
+            _findings.Add(PlayerNames.Actor(culprit), name, text, kind, category, repair);
             Show(name, text);
         }
 

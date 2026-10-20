@@ -62,6 +62,10 @@
       <HintPath>$(ManagedDirectory)\UnityEngine.PhysicsModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="DOTween">
+      <HintPath>$(ManagedDirectory)\DOTween.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Managers">
       <HintPath>$(ManagedDirectory)\Managers.dll</HintPath>
       <Private>false</Private>

@@ -8,13 +8,20 @@ namespace PeakSentinel.Ui.Pages
     public sealed class OtherPage : ITabPage
     {
         private const string Header = "Other protection";
-        private const float AllowHonestWidth = 300f;
+        private const float SecondToggleWidth = 300f;
+        private const string ReclaimHostLabel = "Take the host back if another player takes it (when I am host)";
+        private const string KickThiefLabel = "Kick the thief";
         private const string IgnoreKicksLabel = "Protect me: ignore vanilla kicks from other players (no ragdoll, no push)";
         private const string AllowHonestLabel = "Off when kicks are on in the run";
         private const string ShieldEveryoneLabel = "Protect everyone when I am host: stand up anyone kicked while kicks are off in this run";
         private const string ShieldInKickModeLabel = "Protect everyone even when kicks are on in this run (honest kicks too)";
         private const string ShieldAsClientLabel = "Protect everyone also when I am a client";
         private const string ShieldAsClientWarning = "(other anticheats may see this as suspicious)";
+        private const string ReclaimHint = "if someone takes the host from you, you take it back at once; Kick the thief: they are kicked";
+        private const string ProtectMeHint = "kicks from others do not knock or push you; with the right box honest kicks still work";
+        private const string ShieldEveryoneHint = "anyone kicked while kicks are off in the run is stood back up (the push still lands)";
+        private const string InKickModeHint = "also stands up players kicked honestly while kicks are on";
+        private const string AsClientHint = "the protection of everyone also works while you are not the host";
 
         private readonly FeedSection _feed;
 
@@ -22,19 +29,30 @@ namespace PeakSentinel.Ui.Pages
         {
             SettingsBinder binder = context.Binder;
             context.Ui.Header(page, Header);
-            binder.BindPair(page, IgnoreKicksLabel, other.IgnoreKicks, AllowHonestLabel, other.AllowHonestKicks, AllowHonestWidth);
+            binder.BindPair(page, ReclaimHostLabel, other.ReclaimHost, KickThiefLabel, other.KickHostThieves, SecondToggleWidth);
+            binder.Hint(page, 0, ReclaimHint, host => host ? HintScope.Everyone : HintScope.NeedsHost);
+            binder.BindPair(page, IgnoreKicksLabel, other.IgnoreKicks, AllowHonestLabel, other.AllowHonestKicks, SecondToggleWidth);
+            binder.Hint(page, 0, ProtectMeHint, host => HintScope.You);
             Toggle everyone = binder.BindIndented(page, 1, ShieldEveryoneLabel, other.ShieldEveryoneFromKicks);
             binder.Depend(everyone, () => other.IgnoreKicks.Value);
+            binder.Hint(page, 1, ShieldEveryoneHint, host => ShieldScope(host, other));
             Toggle inKickMode = binder.BindIndented(page, 2, ShieldInKickModeLabel, other.ShieldEveryoneInKickMode);
             binder.Depend(inKickMode, () => other.IgnoreKicks.Value && other.ShieldEveryoneFromKicks.Value);
-            Toggle asClient = binder.BindIndented(page, 2, $"{ShieldAsClientLabel} <color=#{ColorUtility.ToHtmlStringRGB(UiPalette.Suspicious)}>{ShieldAsClientWarning}</color>", other.ShieldEveryoneFromKicksAsClient);
+            binder.Hint(page, 2, InKickModeHint, host => ShieldScope(host, other));
+            Toggle asClient = binder.BindIndented(page, 2, $"{ShieldAsClientLabel} {RichText.Warning(ShieldAsClientWarning)}", other.ShieldEveryoneFromKicksAsClient);
             binder.Depend(asClient, () => other.IgnoreKicks.Value && other.ShieldEveryoneFromKicks.Value);
+            binder.Hint(page, 2, AsClientHint, host => host ? HintScope.NotNeeded : HintScope.Everyone);
             _feed = new FeedSection(context, page, FindingCategory.Other);
         }
 
         public void Refresh()
         {
             _feed.Refresh();
+        }
+
+        private HintScope ShieldScope(bool host, OtherSettings other)
+        {
+            return host || other.ShieldEveryoneFromKicksAsClient.Value ? HintScope.Everyone : HintScope.NeedsHost;
         }
     }
 }

@@ -13,7 +13,7 @@ namespace PeakSentinel.Ui.Pages
         {
             _context = context;
             _options = new FeedOptions(context.Ui, page, context.Filter, context.Findings, context.Refresh);
-            _feed = new FindingFeed(context.Ui, page, category, true);
+            _feed = new FindingFeed(context.Ui, page, category, true, context.Fix);
         }
 
         public void Refresh()
