@@ -16,6 +16,7 @@ namespace PeakSentinel.Detection
         private const int FlareLitKey = 3;
         private const float PeakCheckOffset = 10f;
         private const string TimerActiveField = "timerActive";
+        private const float StandingReach = 15f;
 
         private static readonly Dictionary<string, Rule[]> Rules = BuildRules(); // Static: fixed table of host-only RPCs (same as PEAKER)
 
@@ -57,7 +58,10 @@ namespace PeakSentinel.Detection
                     return call.FromHost || (call.Method == RpcNames.TriggerHelicopter && IsHelicopterLegit(call.View));
 
                 case Sender.Owner:
-                    return call.FromOwner;
+                    return call.FromOwner || call.FromHost;
+
+                case Sender.Standing:
+                    return call.FromHost || StandsNear(call);
 
                 default:
                     PhotonView victim = call.ViewAt(0);
@@ -144,6 +148,12 @@ namespace PeakSentinel.Detection
             return new Repair($"put the ascent back to {ascent}", () => view.RPC(RpcNames.SyncAscent, RpcTarget.All, ascent));
         }
 
+        private bool StandsNear(RpcCall call)
+        {
+            Character standing = PlayerHandler.GetPlayerCharacter(call.Sender);
+            return standing != null && (standing.Center - call.View.transform.position).sqrMagnitude <= StandingReach * StandingReach;
+        }
+
         private bool IsHelicopterLegit(PhotonView view)
         {
             if (Singleton<PeakHandler>.Instance.summonedHelicopter)
@@ -174,10 +184,11 @@ namespace PeakSentinel.Detection
             Add(rules, "BeginAirportLoadRPC", typeof(GameOverHandler), Sender.Host, "sent everyone back to the airport");
             Add(rules, "ShakeBridge_Rpc", typeof(BreakableBridge), Sender.Host, "shook a bridge");
             Add(rules, "Fall_Rpc", typeof(BreakableBridge), Sender.Host, "broke a bridge");
-            Add(rules, "Detach_Rpc", typeof(Rope), Sender.Host, "detached a rope");
-            Add(rules, "ShakeRock", typeof(ShakyIcicleIce), Sender.Host, "shook an icicle");
-            Add(rules, "RPCA_StartBreaking", typeof(ShittyPiton), Sender.Host, "started breaking a piton");
-            Add(rules, "RPCA_Break", typeof(ShittyPiton), Sender.Host, "broke a piton");
+            Add(rules, "Detach_Rpc", typeof(Rope), Sender.Owner, "detached a rope");
+            Add(rules, "ShakeRock", typeof(ShakyIcicleIce), Sender.Standing, "shook an icicle from afar");
+            Add(rules, "ShakeRock", typeof(ShakyRock), Sender.Standing, "shook a rock from afar");
+            Add(rules, "RPCA_StartBreaking", typeof(ShittyPiton), Sender.Owner, "started breaking a piton of", true);
+            Add(rules, "RPCA_Break", typeof(ShittyPiton), Sender.Owner, "broke a piton of", true);
             Add(rules, RpcNames.SyncDayTime, typeof(DayNightManager), Sender.Host, "changed the time of day");
             Add(rules, RpcNames.SyncAscent, typeof(GameUtils), Sender.Host, "changed the ascent (difficulty)");
             Add(rules, "RPC_SyncRunSettings", typeof(GameUtils), Sender.Host, "changed the run settings");
@@ -206,6 +217,7 @@ namespace PeakSentinel.Detection
         {
             Host,
             Owner,
+            Standing,
             Victim,
         }
 

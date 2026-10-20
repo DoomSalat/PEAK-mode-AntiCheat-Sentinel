@@ -5,6 +5,7 @@ using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
 using Photon.Pun;
 using UnityEngine;
+using Zorro.Core;
 using PhotonPlayer = Photon.Realtime.Player;
 
 namespace PeakSentinel.Protection
@@ -17,6 +18,7 @@ namespace PeakSentinel.Protection
         private const string TakeoverTag = "takes over other characters";
         private const string DestroyTag = "destroys other players' objects";
         private const float JoinGraceSeconds = 15f;
+        private const float CheckpointGraceSeconds = 20f;
 
         private static readonly HashSet<string> FrameSyncMethods = new HashSet<string> // Static: fixed RPCs the game sends every frame while a status or effect changes, never a flood
         {
@@ -30,7 +32,8 @@ namespace PeakSentinel.Protection
         private readonly MuteList _mutes;
         private readonly LatencyMeter _latency;
         private string _room;
-        private float _joinedAt;
+        private Segment _segment;
+        private float _calmAt;
 
         public PacketGate(SuspicionReport report, DetectionSettings detection, FloodSettings flood, MuteList mutes, LatencyMeter latency)
         {
@@ -62,7 +65,7 @@ namespace PeakSentinel.Protection
             if ((data.Code == PunCodes.SerializeEvent || data.Code == PunCodes.SerializeReliableEvent) && data.CustomData is object[] serialized && serialized.Length > 0 && serialized[0] is int sentAt)
                 _latency.Note(actor, sentAt);
 
-            if (!sender.IsMasterClient && !JustJoined() && !IsCached(data) && !IsFrameSync(data))
+            if (!sender.IsMasterClient && !InGracePeriod() && !IsCached(data) && !IsFrameSync(data))
                 CountRate(sender, data.Code);
 
             if (data.Code == PunCodes.OwnershipRequestEvent || data.Code == PunCodes.OwnershipTransferEvent)
@@ -74,17 +77,25 @@ namespace PeakSentinel.Protection
             return true;
         }
 
-        private bool JustJoined()
+        private bool InGracePeriod()
         {
             string room = PhotonNetwork.CurrentRoom.Name;
 
             if (room != _room)
             {
                 _room = room;
-                _joinedAt = Time.unscaledTime;
+                _calmAt = Time.unscaledTime + JoinGraceSeconds;
             }
 
-            return Time.unscaledTime - _joinedAt < JoinGraceSeconds;
+            MapHandler map = Singleton<MapHandler>.Instance;
+
+            if (map != null && map.GetCurrentSegment() != _segment)
+            {
+                _segment = map.GetCurrentSegment();
+                _calmAt = Mathf.Max(_calmAt, Time.unscaledTime + CheckpointGraceSeconds);
+            }
+
+            return Time.unscaledTime < _calmAt;
         }
 
         private bool IsFrameSync(EventData data)

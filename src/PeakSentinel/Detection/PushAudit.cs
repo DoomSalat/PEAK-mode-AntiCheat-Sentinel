@@ -19,20 +19,19 @@ namespace PeakSentinel.Detection
         private const string PulseTag = "pushes other players again and again";
         private const string ExplosionTag = "blasts players with no explosive";
         private const string PushTag = "pushes other players";
-        private const float ThrownReach = 5f;
 
         private readonly Dictionary<int, float> _kickedAt = new Dictionary<int, float>();
         private readonly Dictionary<int, float> _blockedUntil = new Dictionary<int, float>();
         private readonly Dictionary<int, Queue<float>> _bursts = new Dictionary<int, Queue<float>>();
         private readonly Dictionary<(int Sender, int Victim), Queue<float>> _pulses = new Dictionary<(int Sender, int Victim), Queue<float>>();
         private readonly Dictionary<(int Sender, int Victim), Vector3> _standing = new Dictionary<(int Sender, int Victim), Vector3>();
-        private readonly ItemLocator _locator;
+        private readonly LegitForces _forces;
         private readonly SuspicionReport _report;
         private readonly DetectionSettings _detection;
 
-        public PushAudit(SuspicionReport report, DetectionSettings detection, ItemLocator locator)
+        public PushAudit(SuspicionReport report, DetectionSettings detection, LegitForces forces)
         {
-            _locator = locator;
+            _forces = forces;
             _report = report;
             _detection = detection;
         }
@@ -69,7 +68,7 @@ namespace PeakSentinel.Detection
             if (victim == null)
                 return true;
 
-            if (_locator.PullsWithRescueHook(call.Sender, victim))
+            if (_forces.Explains(call.Sender, victim))
                 return true;
 
             int sender = call.Sender.ActorNumber;
@@ -92,9 +91,6 @@ namespace PeakSentinel.Detection
 
             if (pulse >= PulsePushes)
                 return Refuse(call, PulseTag, $"pushed {PlayerNames.Name(call.Owner)} again and again (not a kick)", victim, pair);
-
-            if (_locator.LooseItemNear(call.Sender, victim.Center, ThrownReach))
-                return true;
 
             return Refuse(call, PushTag, $"pushed {PlayerNames.Name(call.Owner)} (no kick, nothing they threw hit them)", victim, pair);
         }

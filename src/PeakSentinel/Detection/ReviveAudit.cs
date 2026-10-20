@@ -1,7 +1,9 @@
 using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
+using HarmonyLib;
 using UnityEngine;
+using Zorro.Core;
 
 namespace PeakSentinel.Detection
 {
@@ -10,6 +12,8 @@ namespace PeakSentinel.Detection
         private const float FreshSpawnSeconds = 20f;
         private const float ReviveReach = 12f;
         private const string BookTag = "BookOfBones";
+        private const float SkeletonReach = 3f;
+        private const string SkeletonOwnerField = "spawnedFromCharacter";
         private const string Tag = "revives without a source";
 
         private readonly SuspicionReport _report;
@@ -38,22 +42,50 @@ namespace PeakSentinel.Detection
             if (target == null || HasSource(call, target))
                 return true;
 
-            string action = call.FromOwner ? "revived themselves with no source" : $"revived {PlayerNames.Name(call.Owner)} with no source (no statue, effigy or Book of Bones)";
+            string action = call.FromOwner ? "revived themselves with no source" : $"revived {PlayerNames.Name(call.Owner)} with no source (no statue, effigy, Book of Bones or skeleton)";
             return _report.Refuse(call.Sender, FindingCategory.Cheats, Tag, action, _detection.BlockHostOnlyEvents.Value);
         }
 
         private bool HasSource(RpcCall call, Character target)
         {
+            if (InVoid())
+                return true;
+
             if (call.FromOwner)
                 return _spawns.SpawnedWithin(target, FreshSpawnSeconds);
 
             Character reviver = PlayerHandler.GetPlayerCharacter(call.Sender);
             Item item = reviver == null ? null : reviver.data.currentItem;
 
-            if (item == null || !(call.Argument(0) is Vector3 place) || (reviver.Center - place).sqrMagnitude > ReviveReach * ReviveReach)
+            if (reviver == null || !(call.Argument(0) is Vector3 place) || (reviver.Center - place).sqrMagnitude > ReviveReach * ReviveReach)
+                return false;
+
+            if (SkeletonOf(target, place))
+                return true;
+
+            if (item == null)
                 return false;
 
             return item.TryGetComponent(out ScoutEffigy _) || item.gameObject.CompareTag(BookTag);
+        }
+
+        private bool InVoid()
+        {
+            MapHandler map = Singleton<MapHandler>.Instance;
+            return map != null && map.GetCurrentSegment() == Segment.Void;
+        }
+
+        private bool SkeletonOf(Character target, Vector3 place)
+        {
+            foreach (Collider collider in Physics.OverlapSphere(place, SkeletonReach))
+            {
+                Skelleton skeleton = collider.GetComponentInParent<Skelleton>();
+
+                if (skeleton != null && Traverse.Create(skeleton).Field<Character>(SkeletonOwnerField).Value == target)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

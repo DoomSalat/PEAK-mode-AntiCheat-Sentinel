@@ -19,7 +19,7 @@ namespace PeakSentinel
     {
         public const string Guid = "peaksentinel";
         public const string Name = "Peak Sentinel";
-        public const string Version = "1.0.2";
+        public const string Version = "1.0.3";
 
         private const string TraceFile = "PeakSentinel.log";
         private const string BansFile = "PeakSentinel.bans.txt";
@@ -84,6 +84,7 @@ namespace PeakSentinel
 
         private void WireNetwork(SuspicionReport report, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, FloodSettings flood, ItemRpcAudit items, ItemLocator locator, AreaEffects areas, EffectAudit effects, StatusAudit statuses, SpawnClock spawns, StateLedger ledger, ForeignObjects objects)
         {
+            LegitForces forces = new LegitForces(locator);
             HandGuard hands = new HandGuard(report, protection);
             SentinelHooks.Report = report;
             SentinelHooks.Environment = new EnvironmentMarks();
@@ -93,13 +94,13 @@ namespace PeakSentinel
                 items,
                 hands,
                 new KickShield(report, other),
-                new HarmAudit(report, detection, locator),
+                new HarmAudit(report, detection, locator, forces),
                 new WorldAudit(report, detection),
                 new ControlAudit(report, detection),
                 new CarryAudit(report, detection),
                 new BuildAudit(report, detection, flood),
                 new ReviveAudit(report, detection, spawns),
-                new PushAudit(report, detection, locator),
+                new PushAudit(report, detection, forces),
                 areas,
                 effects,
                 statuses);

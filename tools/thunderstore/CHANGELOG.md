@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3
+
+- No false alarms from: snowballs, frisbees, coconuts and other thrown items (even big hits), the frog tongue, the Venus fly trap, shaky rocks and icicles, pitons and ropes placed by players breaking, reviving a skeleton, mass revive in the Void.
+- Flood is not counted for 20 seconds after a campfire checkpoint moves the run to the next segment.
+
 ## 1.0.2
 
 - Cannibalism (eating a player who allowed it) is not treated as a kill.

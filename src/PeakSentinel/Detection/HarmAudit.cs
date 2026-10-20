@@ -29,11 +29,13 @@ namespace PeakSentinel.Detection
         };
 
         private readonly ItemLocator _locator;
+        private readonly LegitForces _forces;
         private readonly SuspicionReport _report;
         private readonly DetectionSettings _detection;
 
-        public HarmAudit(SuspicionReport report, DetectionSettings detection, ItemLocator locator)
+        public HarmAudit(SuspicionReport report, DetectionSettings detection, ItemLocator locator, LegitForces forces)
         {
+            _forces = forces;
             _locator = locator;
             _report = report;
             _detection = detection;
@@ -147,7 +149,7 @@ namespace PeakSentinel.Detection
 
         private bool CheckFling(RpcCall call, string victim, float force, Character character)
         {
-            return force < FlingForce || (character != null && _locator.PullsWithRescueHook(call.Sender, character)) || Refuse(call, FlingsTag, $"flung {victim} with force {force:F0}", Return(character, victim));
+            return force < FlingForce || (character != null && _forces.Explains(call.Sender, character)) || Refuse(call, FlingsTag, $"flung {victim} with force {force:F0}", Return(character, victim));
         }
 
         private bool Refuse(RpcCall call, string tag, string action, Repair repair)
