@@ -66,6 +66,10 @@
       <HintPath>$(ManagedDirectory)\com.rlabrecque.steamworks.net.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Unity.Mathematics">
+      <HintPath>$(ManagedDirectory)\Unity.Mathematics.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="DOTween">
       <HintPath>$(ManagedDirectory)\DOTween.dll</HintPath>
       <Private>false</Private>

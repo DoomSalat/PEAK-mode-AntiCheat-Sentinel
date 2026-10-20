@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
+using PeakSentinel.Network;
 using PeakSentinel.Protection;
 using PeakSentinel.Reporting;
 using Photon.Pun;
@@ -29,6 +31,13 @@ namespace PeakSentinel.Ui
         private const string HostLabel = " [host]";
         private const string NotInRoom = "not in a room";
         private const string LeftRoom = "left the room";
+        private const float PingSize = 16f;
+        private const int GoodPing = 150;
+        private const int BadPing = 300;
+        private const string PingFormat = "ping {0} ms";
+        private const string NoPing = "ping —";
+        private const string ResyncLabel = "Resync";
+        private const float ResyncWidth = 120f;
         private const string MuteLabel = "Mute";
         private const string UnmuteLabel = "Unmute";
         private const string MutedNote = "   · muted";
@@ -41,6 +50,9 @@ namespace PeakSentinel.Ui
         private readonly BanGuard _banGuard;
         private readonly AvatarCache _avatars;
         private readonly MuteList _mutes;
+        private readonly LatencyMeter _latency;
+        private readonly DesyncFixer _desync;
+        private readonly Dictionary<int, TextMeshProUGUI> _pings = new Dictionary<int, TextMeshProUGUI>();
         private readonly GameObject _list;
         private readonly RectTransform _rows;
         private readonly GameObject _profile;
@@ -58,8 +70,10 @@ namespace PeakSentinel.Ui
         private int _kickArmedActor;
         private int _banArmedActor;
 
-        public PlayerListView(UiFactory ui, Transform parent, FindingLog findings, FeedFilter filter, BanGuard banGuard, AvatarCache avatars, MuteList mutes, Action<FindingLog.Finding> fix)
+        public PlayerListView(UiFactory ui, Transform parent, FindingLog findings, FeedFilter filter, BanGuard banGuard, AvatarCache avatars, MuteList mutes, LatencyMeter latency, DesyncFixer desync, Action<FindingLog.Finding> fix)
         {
+            _desync = desync;
+            _latency = latency;
             _mutes = mutes;
             _avatars = avatars;
             _ui = ui;
@@ -103,9 +117,13 @@ namespace PeakSentinel.Ui
             string signature = ListSignature();
 
             if (signature == _shownRows)
+            {
+                ShowPings();
                 return;
+            }
 
             _shownRows = signature;
+            _pings.Clear();
 
             for (int i = _rows.childCount - 1; i >= 0; i--)
                 UnityEngine.Object.Destroy(_rows.GetChild(i).gameObject);
@@ -118,6 +136,8 @@ namespace PeakSentinel.Ui
 
             foreach (PhotonPlayer player in PhotonNetwork.PlayerList)
                 AddRow(player);
+
+            ShowPings();
         }
 
         private void AddRow(PhotonPlayer player)
@@ -136,16 +156,51 @@ namespace PeakSentinel.Ui
             bool muted = _mutes.IsMuted(player);
             _ui.Flexible(_ui.Label(status, (problems ?? NoIssues) + (muted ? RichText.Warning(MutedNote) : string.Empty), LineSize, ColorOf(standing), true), 1f, 0f);
 
-            if (player.IsLocal || player.IsMasterClient)
+            RectTransform side = _ui.Column(row.transform, 4f, new RectOffset(0, 0, 0, 0));
+            AddButtons(_ui.Row(side, 8f), player, muted);
+            TextMeshProUGUI ping = _ui.Label(side, string.Empty, PingSize, UiPalette.Notice, true);
+            ping.alignment = TextAlignmentOptions.BottomRight;
+            ping.textWrappingMode = TextWrappingModes.NoWrap;
+            _pings[actor] = ping;
+        }
+
+        private void AddButtons(Transform buttons, PhotonPlayer player, bool muted)
+        {
+            int actor = player.ActorNumber;
+
+            if (player.IsLocal)
                 return;
 
-            _ui.Button(row.transform, muted ? UnmuteLabel : MuteLabel, RemovalWidth, ButtonSize, () => SwitchMute(player));
+            _ui.Button(buttons, ResyncLabel, ResyncWidth, ButtonSize, () => _desync.Fix(PlayerHandler.GetPlayerCharacter(player), "by you"));
+
+            if (player.IsMasterClient)
+                return;
+
+            _ui.Button(buttons, muted ? UnmuteLabel : MuteLabel, RemovalWidth, ButtonSize, () => SwitchMute(player));
 
             if (!PhotonNetwork.IsMasterClient)
                 return;
 
-            _ui.Button(row.transform, _kickArmedActor == actor ? ConfirmKickLabel : KickLabel, RemovalWidth, ButtonSize, () => Kick(player));
-            _ui.Button(row.transform, _banArmedActor == actor ? ConfirmBanLabel : BanLabel, RemovalWidth, ButtonSize, () => Ban(player));
+            _ui.Button(buttons, _kickArmedActor == actor ? ConfirmKickLabel : KickLabel, RemovalWidth, ButtonSize, () => Kick(player));
+            _ui.Button(buttons, _banArmedActor == actor ? ConfirmBanLabel : BanLabel, RemovalWidth, ButtonSize, () => Ban(player));
+        }
+
+        private void ShowPings()
+        {
+            foreach (KeyValuePair<int, TextMeshProUGUI> entry in _pings)
+            {
+                PhotonPlayer player = FindPlayer(entry.Key);
+                int? ping = player != null && player.IsLocal ? PhotonNetwork.GetPing() : _latency.PingOf(entry.Key);
+                entry.Value.text = ping.HasValue ? RichText.Paint(string.Format(PingFormat, ping.Value), PingColor(ping.Value)) : NoPing;
+            }
+        }
+
+        private Color PingColor(int ping)
+        {
+            if (ping <= GoodPing)
+                return UiPalette.Clean;
+
+            return ping <= BadPing ? UiPalette.Suspicious : UiPalette.Cheat;
         }
 
         private string ListSignature()

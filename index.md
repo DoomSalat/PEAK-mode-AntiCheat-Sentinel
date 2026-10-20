@@ -6,6 +6,7 @@
 ```
 SentinelPlugin                          — composition root: настройки, отчёт, аудиты, хост-объект, Harmony
 ├── Patches/NetworkPatches              — OnEvent → PacketGate; ExecuteRpc → RpcRouter; NetworkInstantiate → InstantiateAudit; PhotonView.RPC → HandGuard; курсор окна
+├── Patches/CampfirePatches              — «все у костра» (Campfire.EveryoneInRange, обе перегрузки) не учитывает замьюченных: их застывший персонаж не мешает зажечь костёр, отдыху и остановке тумана; в подсказке «нельзя зажечь» их тоже нет
 ├── Patches/PauseMenuPatches            — PlayerUI.Initialize → AvatarBadge на аватарке в меню Esc
 ├── Patches/EnvironmentPatches          — AntiSphere / WindChillZone / PlayerMoveZone помечают персонажей для FlightExemptions
 ├── Network/RpcRouter                   — разбирает RPC в RpcCall, пишет трассу, опрашивает все IRpcAudit
@@ -26,6 +27,7 @@ SentinelPlugin                          — composition root: настройки
 │   ├── FlightTrack, HorizontalSpeed    — история высот и пути
 │   └── FlightExemptions                — законные причины быть в воздухе (RopeLinks, EnvironmentMarks)
 ├── Protection/BanGuard + BanList       — постоянный бан
+├── Protection/DesyncFixer              — лечение «взбесившегося» тела другого игрока у тебя (рассинхрон после захода)
 ├── Protection/HostGuard                — захват хоста: запись, возврат, кик
 ├── Protection/PacketGate + MuteList    — каждое входящее событие Photon: mute игрока, флуд, захват чужого персонажа
 ├── Reporting/SuspicionReport           — запись находки: BepInEx-лог, DebugTrace, FindingLog, лента подключений
@@ -52,6 +54,7 @@ SentinelPlugin                          — composition root: настройки
 | RpcRouter | Network/RpcRouter.cs | Hashtable RPC → RpcCall (ключи 0 view, 3 имя, 4 аргументы, 5 индекс в RpcList); трасса, если RPC кто-то смотрит или TraceAllRpcs; результат — И всех аудитов | `bool Inspect(Hashtable, Player)` |
 | IRpcAudit | Network/IRpcAudit.cs | Контракт аудита RPC | `bool Watches(string)`, `bool Inspect(RpcCall)` — «выполнять ли» |
 | RpcCall | Network/RpcCall.cs | Данные вызова и разбор аргументов | `Sender, View, Owner, FromHost, FromOwner, FromLocal, Argument/StringAt/MagnitudeAt/ViewAt(i), SentBy(p), Component<T>()` |
+| LatencyMeter | Network/LatencyMeter.cs | Пинг других игроков (игра его не передаёт): по каждому обновлению синхронизации (события 201/206, элемент 0 — серверное время отправки) задержка «его клиент → сервер → ты», сглаженная; пинг ≈ (задержка − половина своего пинга) × 2; нет данных 5 с — «—». У заглушённого не меряется (его пакеты отбрасываются) | `Note(actor, sentServerTime)`, `PingOf(actor)` |
 | RpcNames | Network/RpcNames.cs | Имена ванильных RPC | const string |
 
 ### Instruments — Detection
@@ -74,6 +77,7 @@ SentinelPlugin                          — composition root: настройки
 |---|---|---|
 | HandGuard | Protection/HandGuard.cs | Не хост: свои RequestPickup / RPC_RequestFakeItemPickup / RPC_SpawnItemInHandMaster запоминаются на 5 с (патч PhotonView.RPC); OnPickupAccepted без такого запроса — не брать в руку и очистить слот (RefuseForcedPickups) |
 | KickShield | Protection/KickShield.cs | RPCA_Kick запоминает пинающего на 2 с; его RPCA_Fall / RPCA_AddForceAtPosition по тебе отменяются (IgnoreKicks; с AllowHonestKicks — только при выключенных пинках в забеге); при выключенных пинках в забеге каждый пинок — находка; при защите всех упавшему шлётся RPCA_UnFall — только при выключенных пинках, а с ShieldEveryoneInKickMode и при честных пинках |
+| DesyncFixer | Protection/DesyncFixer.cs | Известный баг PEAK: после захода тело другого игрока у тебя носится по карте и отбрасывает подошедших, у остальных всё нормально, помогает только перезаход. Раз в 0,25 с: тело у тебя дальше 8 м от его настоящей позиции (CharacterSyncer.RemoteValue.hipLocation) или быстрее 35 м/с и дальше 3 м — 1,5 с подряд → местная копия `Character.RagdollExorcism` разработчиков: удалить FixedJoint в рэгдолле, WarpPlayer в настоящую позицию локально, 3 с SnapToAnimation + демпфирование 20, затем lastPosition = удалённая позиция. Без сетевых команд; не чаще раза в 10 с на игрока; notice «snapped back locally». Кнопка Resync в Players — то же вручную. [Other] FixDesyncedPlayers (вкл.) |
 | HostGuard | Protection/HostGuard.cs | Подписка на события Photon (OnEnable/OnDisable): PropertiesChanged с ключом MasterClientId от игрока, который не был хостом, пока прежний хост ещё в комнате, — захват (так делают только читы, сервер Photon принимает смену хоста от любого и запретить её нельзя). Всем Sentinel-клиентам — находка Cheats «took the host from X», метка «steals the host». Если хостом был ты и ReclaimHost — сразу `SetMasterClient(себя)` (BLOCKED «taken back»), при KickHostThieves — кик вора, как только хост снова твой |
 | PacketGate | Protection/PacketGate.cs | Префикс `PhotonNetwork.OnEvent`, до разбора PUN: события (коды < 220, серверные не трогает) от заглушённого игрока выбрасываются и считаются; флуд — больше [Flood] MaxRpcPerSecond команд (200), MaxSpawnsPerSecond спавнов (202) или MaxObjectEventsPerSecond удалений и смен владельца (204, 209, 210, 212) за секунду: находка «floods the network» (раз в 10 с), при MuteFlooders — mute; запрос или передача владения (209, 210) персонажем другого игрока — «tried to take control of the character of X», при BlockCharacterTakeover событие отбрасывается; удаление (204) объекта, который принадлежит другому игроку, не хостом — «destroyed … of X», при BlockObjectDestroy отбрасывается |
 | MuteList | Protection/MuteList.cs | Заглушённые в этой комнате по аккаунту (UserId, иначе номер игрока): перезаход игрока mute не снимает, сброс — когда ты сменил комнату и число отброшенных пакетов; Mute / Unmute пишут notice в Other. Голос тоже глушится: громкость игрока в игровом AudioLevels ставится в 0, при Unmute и смене комнаты возвращается прежняя. Хоста заглушить нельзя |
@@ -111,7 +115,7 @@ SentinelPlugin                          — composition root: настройки
 | ManagerSettings | [Manager] | ToggleKey (F6), MaxLogEntries (500, 50–5000) |
 | ProtectionSettings | [Protection] | BlockCheatSpawns, AllowMySpawns, RefuseForcedPickups (все вкл.) |
 | DetectionSettings | [Cheat detection] | HarmToOthers + BlockHarmToOthers, HostOnlyEvents + BlockHostOnlyEvents, DangerousSpawns + BlockDangerousSpawns, Flight + BlockFlight (выкл.), Stamina, SourcelessEffects (оба без блока), ForcedActions + BlockForcedActions, ObjectDestroy + BlockObjectDestroy, BuildSpam + BlockBuildSpam, NameSpoofing, Flood + MuteFlooders, CharacterTakeover + BlockCharacterTakeover, CheatModMarkers + KickCheatModUsers |
-| OtherSettings | [Other] | ReclaimHost (вкл.) + KickHostThieves (выкл.); IgnoreKicks (+ AllowHonestKicks: сама выключается при включённых пинках в забеге) → ShieldEveryoneFromKicks → ShieldEveryoneInKickMode / ShieldEveryoneFromKicksAsClient (цепочка, все выкл.) |
+| OtherSettings | [Other] | FixDesyncedPlayers (вкл.); ReclaimHost (вкл.) + KickHostThieves (выкл.); IgnoreKicks (+ AllowHonestKicks: сама выключается при включённых пинках в забеге) → ShieldEveryoneFromKicks → ShieldEveryoneInKickMode / ShieldEveryoneFromKicksAsClient (цепочка, все выкл.) |
 | StaminaSettings | [Stamina] | FlagSeconds 4, MinDrop 0.02, MinSprintSpeed 3, TraceSamples |
 | FlightSettings | [Flight] | MinGroundDistance, GroundProbeRadius (0.5), WindowSeconds, MaxGravityDrop, FastFallSpeed, FlagSeconds, MaxRunSpeed, SpeedWindowSeconds, SpeedFlagSeconds, TraceSamples |
 | DebugSettings | [Debug] | TraceFile, TraceAllRpcs |

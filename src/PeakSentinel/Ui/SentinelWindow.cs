@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using PeakSentinel.Network;
 using PeakSentinel.Protection;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
@@ -42,6 +43,8 @@ namespace PeakSentinel.Ui
         private BanGuard _banGuard;
         private MuteList _mutes;
         private ReportExport _export;
+        private LatencyMeter _latency;
+        private DesyncFixer _desync;
         private UiFactory _ui;
         private SettingsBinder _binder;
         private HotkeyButton _hotkey;
@@ -51,8 +54,10 @@ namespace PeakSentinel.Ui
 
         public bool IsOpen { get; private set; }
 
-        public void Initialize(string title, ManagerSettings manager, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, FindingLog findings, SuspicionReport report, BanList bans, BanGuard banGuard, MuteList mutes, ReportExport export)
+        public void Initialize(string title, ManagerSettings manager, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, FindingLog findings, SuspicionReport report, BanList bans, BanGuard banGuard, MuteList mutes, ReportExport export, LatencyMeter latency, DesyncFixer desync)
         {
+            _desync = desync;
+            _latency = latency;
             _export = export;
             _mutes = mutes;
             _report = report;
@@ -141,7 +146,7 @@ namespace PeakSentinel.Ui
             AddPage(body, page => new ItemsPage(context, page, _protection));
             AddPage(body, page => new CheatsPage(context, page, _detection));
             AddPage(body, page => new OtherPage(context, page, _other));
-            AddPage(body, page => new PlayersPage(context, page, _banGuard, _avatars, _mutes));
+            AddPage(body, page => new PlayersPage(context, page, _banGuard, _avatars, _mutes, _latency, _desync));
             AddPage(body, page => new BansPage(_ui, page, _bans));
             Select(_tab);
         }

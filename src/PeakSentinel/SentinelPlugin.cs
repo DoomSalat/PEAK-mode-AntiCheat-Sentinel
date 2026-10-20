@@ -43,7 +43,8 @@ namespace PeakSentinel
             MuteList mutes = new MuteList(report);
             SentinelHooks.Mutes = mutes;
             FloodSettings flood = new FloodSettings(Config);
-            SentinelHooks.Gate = new PacketGate(report, detection, flood, mutes);
+            LatencyMeter latency = new LatencyMeter();
+            SentinelHooks.Gate = new PacketGate(report, detection, flood, mutes, latency);
             GameObject host = new GameObject(Name) { hideFlags = HideFlags.HideAndDontSave };
             DontDestroyOnLoad(host);
             EffectAudit effects = host.AddComponent<EffectAudit>();
@@ -52,6 +53,8 @@ namespace PeakSentinel
             revives.Initialize(report, detection);
             WireNetwork(report, protection, detection, other, flood, effects, revives);
             host.AddComponent<HostGuard>().Initialize(report, other);
+            DesyncFixer desync = host.AddComponent<DesyncFixer>();
+            desync.Initialize(report, other);
             BanGuard banGuard = host.AddComponent<BanGuard>();
             banGuard.Initialize(report, bans);
             host.AddComponent<CheatModScan>().Initialize(report, detection);
@@ -59,7 +62,7 @@ namespace PeakSentinel
             host.AddComponent<FlightAudit>().Initialize(report, _trace, detection, new FlightSettings(Config), new FlightExemptions(new RopeLinks(), SentinelHooks.Environment));
             host.AddComponent<StaminaAudit>().Initialize(report, _trace, detection, new StaminaSettings(Config));
             SentinelWindow window = host.AddComponent<SentinelWindow>();
-            window.Initialize($"{Name} {Version}", manager, protection, detection, other, findings, report, bans, banGuard, mutes, new ReportExport(Paths.BepInExRootPath, findings));
+            window.Initialize($"{Name} {Version}", manager, protection, detection, other, findings, report, bans, banGuard, mutes, new ReportExport(Paths.BepInExRootPath, findings), latency, desync);
             SentinelHooks.Window = window;
 
             _harmony = new Harmony(Guid);

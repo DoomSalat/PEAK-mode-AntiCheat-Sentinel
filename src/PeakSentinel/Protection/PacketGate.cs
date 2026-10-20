@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using ExitGames.Client.Photon;
+using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
 using Photon.Pun;
@@ -11,7 +12,9 @@ namespace PeakSentinel.Protection
     public sealed class PacketGate
     {
         private const byte RpcEvent = 200;
+        private const byte SerializeEvent = 201;
         private const byte SpawnEvent = 202;
+        private const byte SerializeReliableEvent = 206;
         private const byte DestroyEvent = 204;
         private const byte OwnershipUpdateEvent = 212;
         private const byte ViewIdKey = 0;
@@ -29,9 +32,11 @@ namespace PeakSentinel.Protection
         private readonly DetectionSettings _detection;
         private readonly FloodSettings _flood;
         private readonly MuteList _mutes;
+        private readonly LatencyMeter _latency;
 
-        public PacketGate(SuspicionReport report, DetectionSettings detection, FloodSettings flood, MuteList mutes)
+        public PacketGate(SuspicionReport report, DetectionSettings detection, FloodSettings flood, MuteList mutes, LatencyMeter latency)
         {
+            _latency = latency;
             _report = report;
             _detection = detection;
             _flood = flood;
@@ -55,6 +60,9 @@ namespace PeakSentinel.Protection
                 _mutes.CountDrop(sender);
                 return false;
             }
+
+            if ((data.Code == SerializeEvent || data.Code == SerializeReliableEvent) && data.CustomData is object[] serialized && serialized.Length > 0 && serialized[0] is int sentAt)
+                _latency.Note(actor, sentAt);
 
             CountRate(sender, data.Code);
 
