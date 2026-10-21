@@ -10,6 +10,9 @@ namespace PeakSentinel.Detection
     {
         private const string MassAffliction = "AddMassAffliction";
         private const string ItemAreaAffliction = "TryAddAfflictionToLocalCharacter";
+        private const string DaggerBuff = "RPC_RitualDaggerBuff";
+        private const string DaggerSource = "a ritual dagger sacrifice (buffs everyone)";
+        private const float Everywhere = float.PositiveInfinity;
         private const float MemorySeconds = 4f;
         private const float DefaultRadius = 20f;
         private const float ReachMargin = 5f;
@@ -25,15 +28,17 @@ namespace PeakSentinel.Detection
 
         public bool Watches(string method)
         {
-            return method == MassAffliction || method == ItemAreaAffliction;
+            return method == MassAffliction || method == ItemAreaAffliction || method == DaggerBuff;
         }
 
         public bool Inspect(RpcCall call)
         {
             if (call.Method == MassAffliction && call.Argument(0) is Vector3 origin && call.Argument(1) is float radius)
                 Remember(origin, radius, "a stamina amulet nearby");
-            else if (call.View != null)
-                Remember(call.Argument(0) is Vector3 point ? point : call.View.transform.position, DefaultRadius, "an area item nearby");
+            else if (call.Method == DaggerBuff && call.Component<RitualDaggerFeedBehavior>() != null)
+                Remember(call.View.transform.position, Everywhere, DaggerSource);
+            else if (call.Method == ItemAreaAffliction && call.View != null)
+                Remember(call.View.transform.position, RadiusOf(call), "an area item nearby");
 
             return true;
         }
@@ -72,6 +77,12 @@ namespace PeakSentinel.Detection
             }
 
             return null;
+        }
+
+        private float RadiusOf(RpcCall call)
+        {
+            Action_ApplyMassAffliction area = call.Component<Action_ApplyMassAffliction>();
+            return area == null ? DefaultRadius : Mathf.Max(area.radius, DefaultRadius);
         }
 
         private void Remember(Vector3 origin, float radius, string source)

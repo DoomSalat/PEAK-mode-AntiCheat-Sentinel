@@ -63,7 +63,10 @@ namespace PeakSentinel.Detection.Stamina
                 return;
             }
 
-            if (!track.Lowest.HasValue || stamina < track.Lowest.Value - _settings.MinDrop.Value)
+            bool ate = character.data.extraStamina > track.Bonus + _settings.MinDrop.Value;
+            track.Bonus = character.data.extraStamina;
+
+            if (!track.Lowest.HasValue || ate || stamina < track.Lowest.Value - _settings.MinDrop.Value)
             {
                 track.Lowest = stamina;
                 track.UnspentFor = 0f;

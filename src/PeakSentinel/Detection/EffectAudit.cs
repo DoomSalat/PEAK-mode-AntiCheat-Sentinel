@@ -21,6 +21,7 @@ namespace PeakSentinel.Detection
         private const string CampfireSource = "lit campfire nearby";
         private const float CampfireReachScale = 1.5f;
         private const float GivenItemSeconds = 60f;
+        private const float ItemReach = 4f;
 
         private static readonly HashSet<Affliction.AfflictionType> Watched = new HashSet<Affliction.AfflictionType> // Static: fixed effects that cheats fake for godmode or endless stamina
         {
@@ -34,9 +35,11 @@ namespace PeakSentinel.Detection
         private DetectionSettings _detection;
         private ItemRpcAudit _items;
         private AreaEffects _areas;
+        private ItemLocator _locator;
 
-        public void Initialize(SuspicionReport report, DebugTrace trace, DetectionSettings detection, ItemRpcAudit items, AreaEffects areas)
+        public void Initialize(SuspicionReport report, DebugTrace trace, DetectionSettings detection, ItemRpcAudit items, AreaEffects areas, ItemLocator locator)
         {
+            _locator = locator;
             _areas = areas;
             _items = items;
             _report = report;
@@ -58,7 +61,7 @@ namespace PeakSentinel.Detection
                 if (_items.RefusedGiveWithin(player, GivenItemSeconds))
                     SettleGiven(player, effect);
                 else
-                    Settle(player, effect, ConsumedSource(player, time) ?? _areas.SourceNear(PlayerHandler.GetPlayerCharacter(player)));
+                    Settle(player, effect, ConsumedSource(player, time) ?? ItemSource(player, effect) ?? _areas.SourceNear(PlayerHandler.GetPlayerCharacter(player)));
             }
         }
 
@@ -125,7 +128,51 @@ namespace PeakSentinel.Detection
                 }
             }
 
+            string item = ItemSource(call.Sender, effect);
+
+            if (item != null)
+            {
+                Settle(call.Sender, effect, item);
+                return;
+            }
+
             _pending.Add((call.Sender, effect, Time.time));
+        }
+
+        private string ItemSource(PhotonPlayer player, Affliction.AfflictionType effect)
+        {
+            Character character = PlayerHandler.GetPlayerCharacter(player);
+
+            if (character == null)
+                return null;
+
+            Item held = character.data.currentItem;
+
+            if (held != null && Gives(held, effect))
+                return $"used '{held.GetItemName()}' in hand";
+
+            Item nearby = _locator.ItemNear(character.Center, ItemReach, item => Gives(item, effect));
+            return nearby == null ? null : $"used '{nearby.GetItemName()}' and put it down";
+        }
+
+        private bool Gives(Item item, Affliction.AfflictionType effect)
+        {
+            if (effect == Affliction.AfflictionType.Invincibility && item.TryGetComponent(out Peak.Action_HealingGem _))
+                return true;
+
+            if (effect == Affliction.AfflictionType.InfiniteStamina && item.TryGetComponent(out Action_ApplyInfiniteStamina _))
+                return true;
+
+            foreach (Action_ApplyAffliction action in item.GetComponents<Action_ApplyAffliction>())
+            {
+                if (action.affliction != null && action.affliction.GetAfflictionType() == effect)
+                    return true;
+
+                if (action.extraAfflictions != null && System.Array.Exists(action.extraAfflictions, extra => extra != null && extra.GetAfflictionType() == effect))
+                    return true;
+            }
+
+            return false;
         }
 
         private void Settle(PhotonPlayer player, Affliction.AfflictionType effect, string source)

@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.6
+
+- Invincibility from Scout's Perseverance (the blue healing amulet) is recognised when it is used in hand or was just put down or passed on. The 1.0.2 note about this was wrong: that change had not made it into the code.
+- Status lock check skips cooked food: cooking changes what a berry does (for example a cooked flame berry), so it gave false alarms.
+- Stamina check starts over when a player eats something that tops up the bonus stamina bar, instead of reporting that stamina does not go down.
+- Flight check no longer flags a player standing on a narrow ledge or sliding along an edge: the game's own grounded flag now counts when the ground point it reports is real terrain right next to the player.
+- Log tabs can be scrolled up again: "Follow newest" jumps to new entries only when the list is already at the bottom.
+- Using the Cursed Skull is no longer reported as other players killing the holder: the game makes every player in the lobby send the holder's death, so all of them were flagged and blocked.
+- Cooking at a campfire: the effects of a cooked item run in every player's game, so everyone sends them to the holder at once. Death, warp to a random player and mushroom knockback that come from cooking are no longer reported as other players attacking the holder.
+- When you are not the host, blocks now say "blocked in your game only": a client can cancel a command only in its own game, other players still get it.
+- In the in-game feed the "blocked" part is blue like the [Sentinel] tag: it is what Sentinel did, the rest of the line is what the player did.
+- Ritual dagger used on a friend gives every other player on the map infinite stamina for 10 s; this is no longer reported as infinite stamina with no source. Area items like the friendship bugle now use their real reach.
+
 ## 1.0.5
 
 - Internal clean-up, no change in what Sentinel detects or blocks. Checks of pushes and thrown items are faster, and access to the game's internal data is kept in one place, so the mod is quicker to fix after a PEAK update.

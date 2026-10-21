@@ -30,12 +30,14 @@ namespace PeakSentinel.Detection
 
         private readonly ItemLocator _locator;
         private readonly LegitForces _forces;
+        private readonly CookingEchoes _cooking;
         private readonly SuspicionReport _report;
         private readonly DetectionSettings _detection;
 
-        public HarmAudit(SuspicionReport report, DetectionSettings detection, ItemLocator locator, LegitForces forces)
+        public HarmAudit(SuspicionReport report, DetectionSettings detection, ItemLocator locator, LegitForces forces, CookingEchoes cooking)
         {
             _forces = forces;
+            _cooking = cooking;
             _locator = locator;
             _report = report;
             _detection = detection;
@@ -63,6 +65,9 @@ namespace PeakSentinel.Detection
             switch (call.Method)
             {
                 case RpcNames.Die:
+                    if (IsDeathEcho(character))
+                        return true;
+
                     if (IsCannibalism(call, character))
                     {
                         _report.Notice(call.Sender, FindingCategory.Cheats, $"ate {victim} (cannibalism is on for them)");
@@ -87,6 +92,9 @@ namespace PeakSentinel.Detection
                     return Refuse(call, CursesTag, $"set the petrification of {victim} to {call.Argument(0)}%", Unpetrify(character, victim));
 
                 case RpcNames.Warp:
+                    if (_cooking.Explains<Action_WarpToRandomPlayer>(character))
+                        return true;
+
                     return Refuse(call, TeleportsTag, $"teleported {victim} to {call.Argument(0)}", Return(character, victim));
 
                 case RpcNames.RocketExplode:
@@ -118,6 +126,15 @@ namespace PeakSentinel.Detection
             }
 
             return _report.Refuse(call.Sender, FindingCategory.Cheats, SelfTeleportTag, action, block, Return(self, PlayerNames.Name(call.Sender)));
+        }
+
+        private bool IsDeathEcho(Character victim)
+        {
+            if (victim == null)
+                return false;
+
+            Item held = victim.data.currentItem;
+            return victim.data.dead || (held != null && held.TryGetComponent(out Action_Die _)) || _cooking.Explains<Action_Die>(victim);
         }
 
         private bool IsCannibalism(RpcCall call, Character victim)

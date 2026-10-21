@@ -6,6 +6,7 @@ namespace PeakSentinel.Detection.Stamina
         public float UnspentFor { get; set; } // Set: accumulated by StaminaAudit while stamina does not go down
         public bool Flagged { get; set; } // Set: StaminaAudit reports each effort once
         public float NextTrace { get; set; } // Set: StaminaAudit throttles the trace
+        public float Bonus { get; set; } // Set: StaminaAudit remembers the bonus stamina bar to notice food topping it up
 
         public void Reset()
         {

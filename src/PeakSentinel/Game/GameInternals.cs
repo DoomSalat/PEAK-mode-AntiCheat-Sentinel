@@ -14,6 +14,7 @@ namespace PeakSentinel.Game
         private static readonly AccessTools.FieldRef<FrogTongue, Character> TongueTarget = AccessTools.FieldRefAccess<FrogTongue, Character>("_targetCharacter"); // Static: cached field accessor
         private static readonly AccessTools.FieldRef<Skelleton, Character> SkeletonOwner = AccessTools.FieldRefAccess<Skelleton, Character>("spawnedFromCharacter"); // Static: cached field accessor
         private static readonly AccessTools.FieldRef<RunManager, bool> TimerActive = AccessTools.FieldRefAccess<RunManager, bool>("timerActive"); // Static: cached field accessor
+        private static readonly AccessTools.FieldRef<AdditionalCookingBehavior, ItemCooking> CookingSource = AccessTools.FieldRefAccess<AdditionalCookingBehavior, ItemCooking>("itemCooking"); // Static: cached field accessor
         private static readonly MethodInfo RemoveInstantiated = AccessTools.Method(typeof(PhotonNetwork), "RemoveInstantiatedGO", new[] { typeof(GameObject), typeof(bool) }); // Static: cached reflection handle
 
         public static IEnumerable<Campfire> Campfires()
@@ -39,6 +40,12 @@ namespace PeakSentinel.Game
         public static bool IsTimerActive(RunManager manager)
         {
             return TimerActive(manager);
+        }
+
+        public static Character HolderOf(AdditionalCookingBehavior behavior)
+        {
+            ItemCooking cooking = CookingSource(behavior);
+            return cooking == null || cooking.item == null ? null : cooking.item.holderCharacter;
         }
 
         public static void RemoveLocal(GameObject target)

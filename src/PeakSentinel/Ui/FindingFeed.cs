@@ -15,6 +15,7 @@ namespace PeakSentinel.Ui
         private const int LinesPerChunk = 40;
         private const float FontSize = 19f;
         private const float FixWidth = 190f;
+        private const float BottomSlack = 24f;
         private const string TimeFormat = "HH:mm:ss";
         private const string Empty = "no findings yet";
         private const string NothingFound = "nothing matches the search";
@@ -53,14 +54,21 @@ namespace PeakSentinel.Ui
             string search = _searchable ? filter.Search.Trim() : string.Empty;
             (int Version, bool Notices, int Actor, string Search, bool Host) wanted = (log.Version, filter.ShowNotices, Actor, search, PhotonNetwork.IsMasterClient);
 
-            if (wanted != _shown)
-            {
-                _shown = wanted;
-                Rebuild(log, filter.ShowNotices, search);
-            }
+            if (wanted == _shown)
+                return;
 
-            if (filter.FollowNewest)
+            bool follow = filter.FollowNewest && AtBottom();
+            _shown = wanted;
+            Rebuild(log, filter.ShowNotices, search);
+
+            if (follow)
                 _scroll.verticalNormalizedPosition = 0f;
+        }
+
+        private bool AtBottom()
+        {
+            float hidden = _content.rect.height - _scroll.viewport.rect.height;
+            return hidden <= BottomSlack || _scroll.verticalNormalizedPosition * hidden <= BottomSlack;
         }
 
         private void Rebuild(FindingLog log, bool notices, string search)
@@ -98,7 +106,11 @@ namespace PeakSentinel.Ui
                 _blocks.Add((RichText.Paint(search.Length > 0 ? NothingFound : Empty, UiPalette.Notice), null));
 
             for (int i = _content.childCount - 1; i >= 0; i--)
-                UnityEngine.Object.Destroy(_content.GetChild(i).gameObject);
+            {
+                GameObject old = _content.GetChild(i).gameObject;
+                old.SetActive(false); // Destroy waits for the frame end; inactive rows already drop out of the layout measured below
+                UnityEngine.Object.Destroy(old);
+            }
 
             foreach ((string text, FindingLog.Finding fixable) in _blocks)
             {

@@ -17,6 +17,8 @@ namespace PeakSentinel.Detection.Flight
         private const float TraceFloor = 1.3f;
         private const float GroundLift = 0.3f;
         private const float SnapFallSeconds = 1.5f;
+        private const float ContactReach = 2.5f;
+        private const float ContactProbe = 0.15f;
         private const string FliesTag = "flies or speeds";
 
         private readonly Dictionary<int, FlightTrack> _tracks = new Dictionary<int, FlightTrack>();
@@ -57,7 +59,7 @@ namespace PeakSentinel.Detection.Flight
         {
             int actor = character.photonView.Owner.ActorNumber;
             FlightTrack track = TrackOf(actor);
-            float ground = GroundDistance(character);
+            float ground = TouchesGround(character) ? 0f : GroundDistance(character);
             string exemption = _exemptions.ReasonFor(character, actor);
             track.FlatSpeed = _horizontal.Measure(actor, now, character.Center, _settings.SpeedWindowSeconds.Value);
             CheckSpeed(character, track, exemption);
@@ -164,6 +166,12 @@ namespace PeakSentinel.Detection.Flight
 
             track.NextTrace = now + TraceSeconds;
             _trace.Flight(character.photonView.Owner, $"ground {ground:F1} m, h-speed {track.FlatSpeed:F1} (too fast {track.FastFor:F1} s), {reason}");
+        }
+
+        private bool TouchesGround(Character character)
+        {
+            CharacterData data = character.data;
+            return data.isGrounded && (data.groundPos - character.Center).sqrMagnitude < ContactReach * ContactReach && Physics.CheckSphere(data.groundPos, ContactProbe, _groundMask);
         }
 
         private float GroundDistance(Character character)

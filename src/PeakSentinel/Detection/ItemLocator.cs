@@ -27,6 +27,17 @@ namespace PeakSentinel.Detection
             return AnyItemNear(owner, point, reach, item => item.TryGetComponent(out T _));
         }
 
+        public Item ItemNear(Vector3 point, float reach, Func<Item, bool> match)
+        {
+            foreach (Item item in Item.ALL_ITEMS)
+            {
+                if (item != null && match(item) && (item.transform.position - point).sqrMagnitude <= reach * reach)
+                    return item;
+            }
+
+            return null;
+        }
+
         private bool AnyItemNear(PhotonPlayer owner, Vector3 point, float reach, Func<Item, bool> match)
         {
             foreach (Item item in Item.ALL_ITEMS)

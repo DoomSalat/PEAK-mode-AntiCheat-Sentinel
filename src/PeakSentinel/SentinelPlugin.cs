@@ -19,7 +19,7 @@ namespace PeakSentinel
     {
         public const string Guid = "peaksentinel";
         public const string Name = "Peak Sentinel";
-        public const string Version = "1.0.5";
+        public const string Version = "1.0.6";
 
         private const string TraceFile = "PeakSentinel.log";
         private const string BansFile = "PeakSentinel.bans.txt";
@@ -71,22 +71,24 @@ namespace PeakSentinel
         {
             DetectionSettings detection = settings.Detection;
             ItemLocator locator = new ItemLocator();
-            LegitForces forces = new LegitForces(locator);
+            CookingEchoes cooking = new CookingEchoes();
+            LegitForces forces = new LegitForces(locator, cooking);
             AreaEffects areas = new AreaEffects(locator);
             ItemRpcAudit items = new ItemRpcAudit(report, settings.Protection, spawns, new BackpackSwap());
             HandGuard hands = new HandGuard(report, settings.Protection);
             EffectAudit effects = host.AddComponent<EffectAudit>();
-            effects.Initialize(report, _trace, detection, items, areas);
+            effects.Initialize(report, _trace, detection, items, areas, locator);
             StatusAudit statuses = host.AddComponent<StatusAudit>();
             statuses.Initialize(report, detection, locator);
 
             SentinelHooks.Hands = hands;
+            SentinelHooks.Cooking = cooking;
             SentinelHooks.Instantiate = new InstantiateAudit(report, _trace, detection, settings.Protection, items, objects, locator);
             SentinelHooks.Router = new RpcRouter(_trace, ledger,
                 items,
                 hands,
                 new KickShield(report, settings.Other),
-                new HarmAudit(report, detection, locator, forces),
+                new HarmAudit(report, detection, locator, forces, cooking),
                 new WorldAudit(report, detection),
                 new ControlAudit(report, detection),
                 new CarryAudit(report, detection),

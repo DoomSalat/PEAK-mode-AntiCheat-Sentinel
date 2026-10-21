@@ -8,15 +8,17 @@ namespace PeakSentinel.Detection
         private const float ThrownReach = 6f;
 
         private readonly ItemLocator _locator;
+        private readonly CookingEchoes _cooking;
 
-        public LegitForces(ItemLocator locator)
+        public LegitForces(ItemLocator locator, CookingEchoes cooking)
         {
             _locator = locator;
+            _cooking = cooking;
         }
 
         public bool Explains(PhotonPlayer sender, Character victim)
         {
-            return victim.refs.afflictions.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.FlyTrap) > 0f || _locator.LooseItemNear(sender, victim.Center, ThrownReach) || PullsVictim(sender, victim);
+            return victim.refs.afflictions.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.FlyTrap) > 0f || _locator.LooseItemNear(sender, victim.Center, ThrownReach) || PullsVictim(sender, victim) || _cooking.Explains<Action_RandomMushroomEffect>(victim);
         }
 
         private bool PullsVictim(PhotonPlayer sender, Character victim)

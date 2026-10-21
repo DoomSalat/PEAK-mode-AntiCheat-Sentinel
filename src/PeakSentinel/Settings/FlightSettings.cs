@@ -8,7 +8,7 @@ namespace PeakSentinel.Settings
 
         public FlightSettings(ConfigFile config)
         {
-            MinGroundDistance = config.Bind(Section, "MinGroundDistance", 1.8f, "A player counts as airborne only higher than this above the terrain under them (meters, own raycast, the player's grounded flag is not trusted).");
+            MinGroundDistance = config.Bind(Section, "MinGroundDistance", 1.8f, "A player counts as airborne only higher than this above the terrain under them (meters, own raycast; the player's grounded flag counts only when the ground point it reports is real terrain right next to them, so a foot on a ledge edge is not flying).");
             GroundProbeRadius = config.Bind(Section, "GroundProbeRadius", 0.5f, "Width of the probe that looks for ground under the player (meters, sphere radius). A thin ray missed ledges when a player stood with one foot on an edge.");
             WindowSeconds = config.Bind(Section, "WindowSeconds", 1.5f, "Length of the window over which the vertical speed change is measured (seconds).");
             MaxGravityDrop = config.Bind(Section, "MaxGravityDrop", -2f, "If over the window the vertical speed dropped less than this (m/s, gravity pulls it down a lot more), gravity is not acting: possible flight.");

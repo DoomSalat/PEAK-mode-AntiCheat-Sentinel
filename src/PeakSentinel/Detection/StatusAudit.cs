@@ -54,7 +54,7 @@ namespace PeakSentinel.Detection
             PhotonView consumerView = call.ViewAt(0);
             Item item = call.Component<Item>();
 
-            if (consumerView == null || item == null || !consumerView.TryGetComponent(out Character consumer) || consumer.IsLocal)
+            if (consumerView == null || item == null || !consumerView.TryGetComponent(out Character consumer) || consumer.IsLocal || IsCooked(item))
                 return true;
 
             foreach (Action_InflictPoison poison in item.GetComponents<Action_InflictPoison>())
@@ -96,6 +96,11 @@ namespace PeakSentinel.Detection
             PhotonView view = consumer.photonView;
             _report.Tag(view.Owner, Tag);
             _report.Suspect(view.Owner, FindingCategory.Cheats, $"ate '{expectation.Item}' but their {expectation.Status} stayed frozen at {now * 100f:F0}%, status lock");
+        }
+
+        private bool IsCooked(Item item)
+        {
+            return item.TryGetComponent(out ItemCooking cooking) && cooking.timesCookedLocal > 0;
         }
 
         private bool IsProtected(Character consumer, CharacterAfflictions.STATUSTYPE status)

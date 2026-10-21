@@ -9,7 +9,8 @@ namespace PeakSentinel.Reporting
     public sealed class SuspicionReport
     {
         private const float RepeatSeconds = 2f;
-        private const string FeedFormat = "<color=#5AA9FF>[Sentinel]</color> <color=#FFD060>{1}</color> <color={0}>{2}</color>";
+        private const string FeedFormat = "<color=#5AA9FF>[Sentinel]</color> <color=#FFD060>{1}</color> {3}<color={0}>{2}</color>";
+        private const string LeadFormat = "<color=#5AA9FF>{0}</color>";
         private const string CheatColor = "#FF6060";
         private const string SuspectColor = "#FFA040";
         private const string GoodColor = "#70DC70";
@@ -18,6 +19,7 @@ namespace PeakSentinel.Reporting
         private const string BlockedLevel = "BLOCKED";
         private const string NoticeLevel = "notice";
         private const string BlockedPrefix = "blocked: ";
+        private const string LocalBlockPrefix = "blocked in your game only (you are not the host): ";
         private const string FixLevel = "FIX";
         private const string FixPrefix = "fix: ";
         private const string UnsureNote = " (heuristic, may be wrong)";
@@ -89,11 +91,16 @@ namespace PeakSentinel.Reporting
         {
             string name = PlayerNames.Name(culprit);
             string level = LevelOf(kind);
-            string text = kind == FindingKind.Blocked ? BlockedPrefix + action : action;
+            string lead = kind == FindingKind.Blocked ? BlockPrefix() : string.Empty;
             _log.LogWarning($"{level} {name} (actor {PlayerNames.Actor(culprit)}): {action}");
             _trace.Finding(level, culprit, action);
-            _findings.Add(PlayerNames.Actor(culprit), name, text, kind, category, repair);
-            Show(name, text, ColorOf(kind == FindingKind.Suspicious ? FeedTone.Suspect : FeedTone.Cheat));
+            _findings.Add(PlayerNames.Actor(culprit), name, lead + action, kind, category, repair);
+            Show(name, action, ColorOf(kind == FindingKind.Suspicious ? FeedTone.Suspect : FeedTone.Cheat), lead);
+        }
+
+        private string BlockPrefix()
+        {
+            return PhotonNetwork.IsMasterClient ? BlockedPrefix : LocalBlockPrefix;
         }
 
         private string LevelOf(FindingKind kind)
@@ -126,9 +133,9 @@ namespace PeakSentinel.Reporting
             }
         }
 
-        private void Show(string name, string action, string color)
+        private void Show(string name, string action, string color, string lead = "")
         {
-            string key = name + action;
+            string key = name + lead + action;
             float now = Time.unscaledTime;
 
             if (_lastShown.TryGetValue(key, out float last) && now - last < RepeatSeconds)
@@ -137,7 +144,7 @@ namespace PeakSentinel.Reporting
             _lastShown[key] = now;
 
             if (Feed != null)
-                Feed.AddMessage(string.Format(FeedFormat, color, name, action));
+                Feed.AddMessage(string.Format(FeedFormat, color, name, action, lead.Length > 0 ? string.Format(LeadFormat, lead) : string.Empty));
         }
     }
 }
