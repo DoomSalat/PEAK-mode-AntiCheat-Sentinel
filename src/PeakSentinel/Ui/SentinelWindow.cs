@@ -12,6 +12,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
+using PhotonPlayer = Photon.Realtime.Player;
 
 namespace PeakSentinel.Ui
 {
@@ -25,6 +26,11 @@ namespace PeakSentinel.Ui
         private const float RefreshSeconds = 0.25f;
         private const float TitleSize = 28f;
         private const float TabSize = 21f;
+        private const float LobbySize = 19f;
+        private const string NoLobby = "Not in a lobby";
+        private const string HostIsYou = "Lobby protected: you are the host";
+        private const string HostRuns = "Lobby protected: host {0} runs Peak Sentinel";
+        private const string HostLacks = "Lobby not protected: host {0} has no Peak Sentinel";
 
         private static readonly string[] Tabs = { "Log", "Items", "Cheats", "Other", "Players", "Bans" }; // Static: fixed tab captions, in page order
 
@@ -45,17 +51,20 @@ namespace PeakSentinel.Ui
         private ReportExport _export;
         private LatencyMeter _latency;
         private DesyncFixer _desync;
+        private SentinelPresence _presence;
         private UiFactory _ui;
         private SettingsBinder _binder;
         private HotkeyButton _hotkey;
+        private TextMeshProUGUI _lobby;
         private GameObject _canvas;
         private int _tab;
         private float _nextRefresh;
 
         public bool IsOpen { get; private set; }
 
-        public void Initialize(string title, ManagerSettings manager, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, FindingLog findings, SuspicionReport report, BanList bans, BanGuard banGuard, MuteList mutes, ReportExport export, LatencyMeter latency, DesyncFixer desync)
+        public void Initialize(string title, ManagerSettings manager, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, FindingLog findings, SuspicionReport report, BanList bans, BanGuard banGuard, MuteList mutes, ReportExport export, LatencyMeter latency, DesyncFixer desync, SentinelPresence presence)
         {
+            _presence = presence;
             _desync = desync;
             _latency = latency;
             _export = export;
@@ -146,7 +155,7 @@ namespace PeakSentinel.Ui
             AddPage(body, page => new ItemsPage(context, page, _protection));
             AddPage(body, page => new CheatsPage(context, page, _detection));
             AddPage(body, page => new OtherPage(context, page, _other));
-            AddPage(body, page => new PlayersPage(context, page, _banGuard, _avatars, _mutes, _latency, _desync));
+            AddPage(body, page => new PlayersPage(context, page, _banGuard, _avatars, _mutes, _latency, _desync, _presence));
             AddPage(body, page => new BansPage(_ui, page, _bans));
             Select(_tab);
         }
@@ -159,6 +168,8 @@ namespace PeakSentinel.Ui
             title.raycastTarget = true;
             title.gameObject.AddComponent<DragHandle>().Initialize(panel, _canvas.GetComponent<Canvas>());
             _ui.Flexible(title, 1f, 0f);
+            _lobby = _ui.Label(header, string.Empty, LobbySize, UiPalette.Notice, false);
+            _lobby.alignment = TextAlignmentOptions.MidlineRight;
             _hotkey = new HotkeyButton(_ui, header, _manager.ToggleKey);
         }
 
@@ -200,8 +211,25 @@ namespace PeakSentinel.Ui
         private void Refresh()
         {
             _nextRefresh = Time.unscaledTime + RefreshSeconds;
+            ShowLobby();
             _binder.Refresh();
             _pages[_tab].Page.Refresh();
+        }
+
+        private void ShowLobby()
+        {
+            PhotonPlayer host = PhotonNetwork.InRoom ? PhotonNetwork.MasterClient : null;
+
+            if (host == null)
+            {
+                _lobby.text = NoLobby;
+                _lobby.color = UiPalette.Notice;
+                return;
+            }
+
+            bool guarded = _presence.Runs(host);
+            _lobby.text = host.IsLocal ? HostIsYou : string.Format(guarded ? HostRuns : HostLacks, PlayerNames.Name(host));
+            _lobby.color = guarded ? UiPalette.Clean : UiPalette.Suspicious;
         }
 
         private string ExportReport()

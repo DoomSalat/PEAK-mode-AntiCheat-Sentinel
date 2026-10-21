@@ -49,7 +49,7 @@ namespace PeakSentinel.Protection
             if (block)
                 character.player.EmptySlot(Optionable<byte>.Some(slotId));
 
-            _report.Flag(null, FindingCategory.Items, block ? $"forced '{item}' into your hands through the host, removed it" : $"forced '{item}' into your hands through the host", block);
+            _report.Flag(null, FindingCategory.Items, block ? $"forced '{item}' into your hands through the host (the spawner may be not the host), removed it" : $"forced '{item}' into your hands through the host (the spawner may be not the host)", block);
             return !block;
         }
 

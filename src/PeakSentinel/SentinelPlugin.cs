@@ -19,7 +19,7 @@ namespace PeakSentinel
     {
         public const string Guid = "peaksentinel";
         public const string Name = "Peak Sentinel";
-        public const string Version = "1.0.3";
+        public const string Version = "1.0.4";
 
         private const string TraceFile = "PeakSentinel.log";
         private const string BansFile = "PeakSentinel.bans.txt";
@@ -59,6 +59,8 @@ namespace PeakSentinel
             statuses.Initialize(report, detection, locator);
             WireNetwork(report, protection, detection, other, flood, items, locator, areas, effects, statuses, spawns, ledger, objects);
             host.AddComponent<HostGuard>().Initialize(report, other);
+            SentinelPresence presence = host.AddComponent<SentinelPresence>();
+            presence.Initialize(report, Version);
             DesyncFixer desync = host.AddComponent<DesyncFixer>();
             desync.Initialize(report, other, ledger);
             BanGuard banGuard = host.AddComponent<BanGuard>();
@@ -68,7 +70,7 @@ namespace PeakSentinel
             host.AddComponent<FlightAudit>().Initialize(report, _trace, detection, new FlightSettings(Config), new FlightExemptions(new RopeLinks(), SentinelHooks.Environment, spawns));
             host.AddComponent<StaminaAudit>().Initialize(report, _trace, detection, new StaminaSettings(Config));
             SentinelWindow window = host.AddComponent<SentinelWindow>();
-            window.Initialize($"{Name} {Version}", manager, protection, detection, other, findings, report, bans, banGuard, mutes, new ReportExport(Paths.BepInExRootPath, findings), latency, desync);
+            window.Initialize($"{Name} {Version}", manager, protection, detection, other, findings, report, bans, banGuard, mutes, new ReportExport(Paths.BepInExRootPath, findings), latency, desync, presence);
             SentinelHooks.Window = window;
 
             _harmony = new Harmony(Guid);

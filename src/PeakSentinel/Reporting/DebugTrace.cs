@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 using BepInEx.Configuration;
+using Photon.Pun;
 using UnityEngine;
 using PhotonPlayer = Photon.Realtime.Player;
 
@@ -10,6 +11,7 @@ namespace PeakSentinel.Reporting
     public sealed class DebugTrace : IDisposable
     {
         private const string TimeFormat = "HH:mm:ss.fff";
+        private const string ThroughHostNote = " (may be not the host: on a client, items spawned through the host carry the host's name)";
         private const string Separator = ", ";
         private const string Null = "null";
 
@@ -36,7 +38,8 @@ namespace PeakSentinel.Reporting
 
         public void Instantiate(PhotonPlayer creator, string prefab, Vector3 position)
         {
-            Write($"INSTANTIATE {prefab} by {Describe(creator)} at {position}");
+            string throughHost = creator != null && creator.IsMasterClient && !PhotonNetwork.IsMasterClient ? ThroughHostNote : string.Empty;
+            Write($"INSTANTIATE {prefab} by {Describe(creator)}{throughHost} at {position}");
         }
 
         public void Flight(PhotonPlayer player, string numbers)

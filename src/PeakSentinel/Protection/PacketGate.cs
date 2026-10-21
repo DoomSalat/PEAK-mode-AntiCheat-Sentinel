@@ -149,7 +149,8 @@ namespace PeakSentinel.Protection
         private void ReportFlood(PhotonPlayer sender, int rpcs, int spawns, int objects, int seconds)
         {
             bool mute = _detection.MuteFlooders.Value;
-            _report.Refuse(sender, FindingCategory.Cheats, FloodTag, $"floods the network for {seconds} s in a row: {rpcs} commands, {spawns} spawns and {objects} object changes in the last second", mute);
+            _report.Tag(sender, FloodTag);
+            _report.Suspect(sender, FindingCategory.Cheats, $"floods the network for {seconds} s in a row: {rpcs} commands, {spawns} spawns and {objects} object changes in the last second", mute);
 
             if (mute)
                 _mutes.Mute(sender, "flood");

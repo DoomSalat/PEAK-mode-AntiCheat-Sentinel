@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.4
+
+- The manager window header always shows whether the lobby is protected (does the host run Peak Sentinel) and updates when the host changes.
+- Log tab: a legend with coloured dots explains what each log colour means.
+- In-game feed: the [Sentinel] tag is blue, the text is red for cheats and blocks, orange for suspicions (network floods are suspicions now) and green when protection worked (lobby protected, Fix). An ignored kick is red when kicks are off in the run and orange when the game allows them.
+- The mod page explains how to send logs about a false alarm or an item spawn the host could not block.
+- Players tab: a blue shield marks everyone who runs Peak Sentinel too.
+- When you join a lobby, Sentinel says whether the host runs it: "lobby protected" or "the host has no Peak Sentinel, the lobby is not protected".
+- On a client, items spawned through the host are marked "may be not the host" in the trace and in findings: the real spawner is only visible to the host.
+
 ## 1.0.3
 
 - No false alarms from: snowballs, frisbees, coconuts and other thrown items (even big hits), the frog tongue, the Venus fly trap, shaky rocks and icicles, pitons and ropes placed by players breaking, reviving a skeleton, mass revive in the Void.

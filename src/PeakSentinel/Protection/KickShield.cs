@@ -54,7 +54,7 @@ namespace PeakSentinel.Protection
                 return true;
 
             if (call.Method == RpcNames.Fall)
-                _report.Notice(call.Sender, FindingCategory.Other, "kicked you, the kick was ignored");
+                _report.Announce(call.Sender, FindingCategory.Other, "kicked you, the kick was ignored", KickTone());
 
             return false;
         }
@@ -65,8 +65,13 @@ namespace PeakSentinel.Protection
                 return true;
 
             victim.photonView.RPC(RpcNames.UnFall, RpcTarget.All);
-            _report.Notice(call.Sender, FindingCategory.Other, $"kicked {PlayerNames.Name(victim.photonView.Owner)}, stood them back up");
+            _report.Announce(call.Sender, FindingCategory.Other, $"kicked {PlayerNames.Name(victim.photonView.Owner)}, stood them back up", KickTone());
             return true;
+        }
+
+        private FeedTone KickTone()
+        {
+            return IsKickMode() ? FeedTone.Suspect : FeedTone.Cheat;
         }
 
         private void NoteKick(PhotonPlayer sender)

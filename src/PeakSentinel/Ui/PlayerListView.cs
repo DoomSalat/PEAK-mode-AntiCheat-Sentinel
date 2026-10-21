@@ -52,6 +52,7 @@ namespace PeakSentinel.Ui
         private readonly MuteList _mutes;
         private readonly LatencyMeter _latency;
         private readonly DesyncFixer _desync;
+        private readonly SentinelPresence _presence;
         private readonly Dictionary<int, TextMeshProUGUI> _pings = new Dictionary<int, TextMeshProUGUI>();
         private readonly GameObject _list;
         private readonly RectTransform _rows;
@@ -70,9 +71,10 @@ namespace PeakSentinel.Ui
         private int _kickArmedActor;
         private int _banArmedActor;
 
-        public PlayerListView(UiFactory ui, Transform parent, FindingLog findings, FeedFilter filter, BanGuard banGuard, AvatarCache avatars, MuteList mutes, LatencyMeter latency, DesyncFixer desync, Action<FindingLog.Finding> fix)
+        public PlayerListView(UiFactory ui, Transform parent, FindingLog findings, FeedFilter filter, BanGuard banGuard, AvatarCache avatars, MuteList mutes, LatencyMeter latency, DesyncFixer desync, SentinelPresence presence, Action<FindingLog.Finding> fix)
         {
             _desync = desync;
+            _presence = presence;
             _latency = latency;
             _mutes = mutes;
             _avatars = avatars;
@@ -153,6 +155,10 @@ namespace PeakSentinel.Ui
             PlayerStanding standing = _findings.StandingOf(actor);
             RectTransform status = _ui.Row(text, 8f);
             _ui.Icon(status, _ui.Faces.Of(standing), FaceSize);
+
+            if (_presence.Runs(player))
+                _ui.Icon(status, _ui.Shield, FaceSize);
+
             bool muted = _mutes.IsMuted(player);
             _ui.Flexible(_ui.Label(status, (problems ?? NoIssues) + (muted ? RichText.Warning(MutedNote) : string.Empty), LineSize, ColorOf(standing), true), 1f, 0f);
 
@@ -212,7 +218,7 @@ namespace PeakSentinel.Ui
                 return _signature.ToString();
 
             foreach (PhotonPlayer player in PhotonNetwork.PlayerList)
-                _signature.Append('|').Append(player.ActorNumber).Append(player.NickName).Append(player.IsMasterClient);
+                _signature.Append('|').Append(player.ActorNumber).Append(player.NickName).Append(player.IsMasterClient).Append(_presence.Runs(player));
 
             return _signature.ToString();
         }

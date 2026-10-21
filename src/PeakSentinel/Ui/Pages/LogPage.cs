@@ -13,6 +13,12 @@ namespace PeakSentinel.Ui.Pages
         private const string ExportLabel = "Export";
         private const float ExportWidth = 140f;
         private const string SavedFormat = "Saved: {0}";
+        private const float LegendSize = 17f;
+        private const float DotSize = 14f;
+        private const string CheatMeaning = "cheat or blocked";
+        private const string SuspectMeaning = "suspicion, may be wrong";
+        private const string FixMeaning = "fix applied";
+        private const string NoticeMeaning = "info, nothing wrong";
 
         private readonly PageContext _context;
         private readonly TextMeshProUGUI _stored;
@@ -31,6 +37,7 @@ namespace PeakSentinel.Ui.Pages
             _capacity.contentType = TMP_InputField.ContentType.IntegerNumber;
             _capacity.onEndEdit.AddListener(Resize);
             context.Ui.Button(row, ExportLabel, ExportWidth, TextSize, Export);
+            AddLegend(context.Ui, page);
             _saved = context.Ui.Label(page, string.Empty, TextSize, UiPalette.Clean, false);
             _saved.gameObject.SetActive(false);
             _feed = new FeedSection(context, page, null);
@@ -45,6 +52,22 @@ namespace PeakSentinel.Ui.Pages
                 _capacity.SetTextWithoutNotify(findings.Capacity.ToString());
 
             _feed.Refresh();
+        }
+
+        private void AddLegend(UiFactory ui, Transform page)
+        {
+            RectTransform legend = ui.Row(page, 18f);
+            AddMeaning(ui, legend, UiPalette.Cheat, CheatMeaning);
+            AddMeaning(ui, legend, UiPalette.Suspicious, SuspectMeaning);
+            AddMeaning(ui, legend, UiPalette.Clean, FixMeaning);
+            AddMeaning(ui, legend, UiPalette.Notice, NoticeMeaning);
+        }
+
+        private void AddMeaning(UiFactory ui, Transform legend, Color color, string meaning)
+        {
+            RectTransform pair = ui.Row(legend, 6f);
+            ui.Icon(pair, ui.Dot, DotSize).color = color;
+            ui.Label(pair, meaning, LegendSize, UiPalette.Text, false);
         }
 
         private void Export()

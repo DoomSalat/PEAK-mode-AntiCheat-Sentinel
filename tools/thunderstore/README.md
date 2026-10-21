@@ -34,12 +34,15 @@ Every setting in the window tells you in plain words what happens if you turn it
 
 ## The manager window (F6)
 
-- **Log, Items, Cheats, Other** — findings with search, colours (orange — a guess, red — a cheat or a block) and the switches.
+- **Log, Items, Cheats, Other** — findings with search, colours (red — a cheat or a block, orange — a guess, green — a fix you applied, brown — info) explained by a legend at the top of the Log tab, and the switches.
 - **Fix** — next to findings that can be undone: revive a killed player, wake a knocked-out one, return a teleported one, relight a campfire, put the fog back, put the time of day and the run timer back.
-- **Players** — every player with their Steam avatar, a status face, what they did and their ping (lag or cheats?). **Mute** (for anyone): everything that player sends is ignored on your side for the session, voice included — to you they freeze, go silent and can do nothing, even if they rejoin. On Unmute everything they did meanwhile is caught up: statuses, effects, death or revive, their ghost, objects they made or removed. In the Esc menu their avatar turns grey and crossed out. Kick and Ban for the host.
+- **Players** — every player with their Steam avatar, a status face, a blue shield if they run Peak Sentinel too, what they did and their ping (lag or cheats?). **Mute** (for anyone): everything that player sends is ignored on your side for the session, voice included — to you they freeze, go silent and can do nothing, even if they rejoin. On Unmute everything they did meanwhile is caught up: statuses, effects, death or revive, their ghost, objects they made or removed. In the Esc menu their avatar turns grey and crossed out. Kick and Ban for the host.
 - **Bans** — your permanent ban list with Unban; copy it to the clipboard and share it with friends.
 - **Export** — save the whole session report to a file.
+- The window header always shows whether your lobby is protected: green when the host runs Peak Sentinel (or you are the host), orange when the host has none. It updates when the host changes.
 - The window key can be changed with the button in the window header.
+
+When you join a lobby, Sentinel tells you whether the host runs it too: **lobby protected**, or **the host has no Peak Sentinel, the lobby is not protected**.
 
 In the **Esc menu** a player gets an orange **?** if they behaved strangely and a pulsing red **!** if they cheated.
 
@@ -48,6 +51,7 @@ In the **Esc menu** a player gets an orange **?** if they behaved strangely and 
 - Each client decides for itself what to run. If a cheater kills a player who has no Sentinel, that player dies — the host can't stop a command that goes straight to the victim. **The more of your friends install Sentinel, the less a cheater can do.**
 - Flying, speed and stamina checks are guesses: they can be wrong, and they say so in the log.
 - A cheating host can't be caught.
+- On a client, items spawned through the host look as if the host made them (marked "may be not the host"): only the host sees who really asked.
 - Only the game's developers could protect everyone on the server side. A mod can't change the Photon server.
 
 ## Install
@@ -57,3 +61,23 @@ Thunderstore Mod Manager or r2modman. Or by hand: put `PeakSentinel.dll` into `B
 Settings: `BepInEx/config/peaksentinel.cfg`. Debug log (off by default, turn on `[Debug] TraceFile`): `BepInEx/PeakSentinel.log`.
 
 Source: [github.com/DoomSalat/PEAK-mode-AntiCheat-Sentinel](https://github.com/DoomSalat/PEAK-mode-AntiCheat-Sentinel)
+
+## Something went wrong? Send the logs
+
+Your logs help a lot, especially in these two cases:
+
+- **An honest player was flagged** — Sentinel reported or blocked something that was normal play.
+- **The host runs Sentinel, but an item spawn was not blocked.**
+
+What to attach:
+
+1. **The report**: in the F6 window press **Log → Export**. The file appears in `BepInEx/` as `PeakSentinel-report-<date>.txt`.
+2. **The trace**, if you can: turn on `[Debug] TraceFile` in `BepInEx/config/peaksentinel.cfg` (and `TraceAllRpcs` for the most detail), play until it happens again, then attach `BepInEx/PeakSentinel.log`. Zip it if it is bigger than 25 MB.
+3. A few words: what happened, who did it and roughly when.
+
+The files contain the nicknames of the players in your lobby.
+
+Where to send them:
+
+- **GitHub**: [open an issue](https://github.com/DoomSalat/PEAK-mode-AntiCheat-Sentinel/issues) and drag the files into it.
+- **PEAK Modding Community** on Discord: [discord.com/servers/peak-modding-community](https://discord.com/servers/peak-modding-community-1363179626435707082).
