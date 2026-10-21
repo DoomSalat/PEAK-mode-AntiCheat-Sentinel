@@ -1,6 +1,5 @@
-using System.Reflection;
 using ExitGames.Client.Photon;
-using HarmonyLib;
+using PeakSentinel.Game;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
@@ -10,13 +9,9 @@ namespace PeakSentinel.Network
 {
     public sealed class ForeignObjects
     {
-        private const string RemoveObjectMethod = "RemoveInstantiatedGO";
-
-        private static readonly MethodInfo RemoveObject = AccessTools.Method(typeof(PhotonNetwork), RemoveObjectMethod, new[] { typeof(GameObject), typeof(bool) }); // Static: PUN's internal local removal, looked up once
-
         public void RemoveLocal(GameObject target)
         {
-            RemoveObject.Invoke(null, new object[] { target, true });
+            GameInternals.RemoveLocal(target);
         }
 
         public void RemoveForEveryone(GameObject target, PhotonPlayer creator)

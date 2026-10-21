@@ -56,5 +56,33 @@ namespace PeakSentinel.Network
         public const string LightFlare = "SetFlareLitRPC";
         public const string Build = "CreatePrefabRPC";
         public const string SyncAfflictions = "SyncAfflictionsRPC";
+        public const string StopVineClimbing = "StopVineClimbingRpc";
+        public const string ClimbJump = "RPCA_ClimbJump";
+        public const string Stick = "RPCA_Stick";
+        public const string ClearStickData = "RPCA_ClearStickData";
+        public const string ClearJoint = "RPCA_ClearJoint";
+        public const string DestroyHeldItem = "DestroyHeldItemRpc";
+        public const string ThrowItem = "DropItemRpc";
+        public const string DisperseBees = "DisperseRPC";
+        public const string AngerBees = "SetBeesAngryRPC";
+        public const string EndGame = "RPCEndGame";
+        public const string ForceWin = "RPCEndGame_ForceWin";
+        public const string InitGhost = "RPCA_InitGhost";
+        public const string GhostTarget = "RPCA_SetTarget";
+        public const string SpawnEruption = "RPCA_SpawnEruption";
+        public const string GrowVine = "RPC_GrowVine";
+        public const string StartIsland = "BeginIslandLoadRPC";
+        public const string BackToAirport = "BeginAirportLoadRPC";
+        public const string ShakeBridge = "ShakeBridge_Rpc";
+        public const string BreakBridge = "Fall_Rpc";
+        public const string DetachRope = "Detach_Rpc";
+        public const string ShakeRock = "ShakeRock";
+        public const string StartBreakingPiton = "RPCA_StartBreaking";
+        public const string BreakPiton = "RPCA_Break";
+        public const string SyncRunSettings = "RPC_SyncRunSettings";
+        public const string SpawnResource = "RPC_SpawnResourceAtPosition";
+        public const string SyncLava = "RPC_SyncLava";
+        public const string SyncThorns = "SyncThornsRPC_Remote";
+        public const string SetBlockedState = "RPC_SetBlockedState";
     }
 }

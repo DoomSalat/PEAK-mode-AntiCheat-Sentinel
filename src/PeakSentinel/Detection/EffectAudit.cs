@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using HarmonyLib;
 using Peak.Afflictions;
+using PeakSentinel.Game;
 using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
@@ -19,7 +19,6 @@ namespace PeakSentinel.Detection
         private const string UnknownItem = "unknown item";
         private const string ShieldSource = "golden Bing Bong in hand";
         private const string CampfireSource = "lit campfire nearby";
-        private const string CampfiresField = "ALL_CAMPFIRES";
         private const float CampfireReachScale = 1.5f;
         private const float GivenItemSeconds = 60f;
 
@@ -157,7 +156,7 @@ namespace PeakSentinel.Detection
 
         private bool NearLitCampfire(Character character)
         {
-            foreach (Campfire campfire in Traverse.Create(typeof(Campfire)).Field<List<Campfire>>(CampfiresField).Value)
+            foreach (Campfire campfire in GameInternals.Campfires())
             {
                 if (campfire == null || !campfire.Lit)
                     continue;

@@ -1,7 +1,7 @@
+using PeakSentinel.Game;
 using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
-using HarmonyLib;
 using UnityEngine;
 using Zorro.Core;
 
@@ -13,7 +13,6 @@ namespace PeakSentinel.Detection
         private const float ReviveReach = 12f;
         private const string BookTag = "BookOfBones";
         private const float SkeletonReach = 3f;
-        private const string SkeletonOwnerField = "spawnedFromCharacter";
         private const string Tag = "revives without a source";
 
         private readonly SuspicionReport _report;
@@ -81,7 +80,7 @@ namespace PeakSentinel.Detection
             {
                 Skelleton skeleton = collider.GetComponentInParent<Skelleton>();
 
-                if (skeleton != null && Traverse.Create(skeleton).Field<Character>(SkeletonOwnerField).Value == target)
+                if (skeleton != null && GameInternals.OwnerOf(skeleton) == target)
                     return true;
             }
 

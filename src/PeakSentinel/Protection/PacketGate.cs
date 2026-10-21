@@ -22,7 +22,7 @@ namespace PeakSentinel.Protection
 
         private static readonly HashSet<string> FrameSyncMethods = new HashSet<string> // Static: fixed RPCs the game sends every frame while a status or effect changes, never a flood
         {
-            RpcNames.SyncAfflictions, RpcNames.SyncStatuses, "SyncThornsRPC_Remote",
+            RpcNames.SyncAfflictions, RpcNames.SyncStatuses, RpcNames.SyncThorns,
         };
 
         private readonly Dictionary<int, (float Start, int Rpcs, int Spawns, int Objects, int Streak, float Reported)> _rates = new Dictionary<int, (float Start, int Rpcs, int Spawns, int Objects, int Streak, float Reported)>();

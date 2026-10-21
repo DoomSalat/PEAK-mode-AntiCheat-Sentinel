@@ -4,7 +4,9 @@
 
 ## Layer Map
 ```
-SentinelPlugin                          — composition root: настройки, отчёт, аудиты, хост-объект, Harmony
+SentinelPlugin                          — composition root по шагам: ядро (SentinelSettings, DebugTrace, FindingLog, SuspicionReport) → GuardPackets → AuditRpcs → Watch → OpenWindow, затем Harmony
+├── Settings/SentinelSettings            — все группы настроек одним объектом
+├── Game/GameInternals                   — единственный доступ к закрытым полям игры и PUN (кэшированные FieldRef), чинить здесь после патча PEAK
 ├── Patches/NetworkPatches              — OnEvent → PacketGate; ExecuteRpc → RpcRouter; NetworkInstantiate → InstantiateAudit; PhotonView.RPC → HandGuard; курсор окна
 ├── Patches/CampfirePatches              — «все у костра» (Campfire.EveryoneInRange, обе перегрузки) не учитывает замьюченных: их застывший персонаж не мешает зажечь костёр, отдыху и остановке тумана; в подсказке «нельзя зажечь» их тоже нет
 ├── Patches/PauseMenuPatches            — PlayerUI.Initialize → AvatarBadge на аватарке в меню Esc
@@ -14,11 +16,14 @@ SentinelPlugin                          — composition root: настройки
 │   ├── Protection/HandGuard            — подсунутый в руки предмет (клиент)
 │   ├── Protection/KickShield           — пинки
 │   ├── Detection/HarmAudit             — вред другим игрокам
-│   ├── Detection/PushAudit             — «пульс» и «взрыв» без взрывчатки (серии слабых толчков)
+│   ├── Detection/PushAudit             — толчки без пинка, «пульс», «взрыв» (честные причины — LegitForces + ItemLocator)
 │   ├── Detection/WorldAudit            — события, которые вправе слать только хост
 │   ├── Detection/ControlAudit          — принуждение чужого персонажа (прыжок, присед, отпустить, выронить, эмоция, статусы)
 │   ├── Detection/BuildAudit            — постройка чужим предметом и спам постройками (флаги)
+│   ├── Detection/CarryAudit            — переноска не по правилам игры
 │   ├── Detection/ReviveAudit           — воскрешение без источника (само-рес)
+│   ├── Detection/AreaEffects           — эффекты по области (амулеты, предметы) как источник
+│   ├── Detection/StatusAudit           — лок статусов (съел вредное, статус застыл)
 │   └── Detection/EffectAudit           — защита / бесконечная стамина без источника
 ├── Detection/InstantiateAudit          — сетевое создание предметов и опасных префабов
 ├── Detection/CheatModScan              — метки Cherry / Atlas / PEAK-MX
@@ -30,10 +35,13 @@ SentinelPlugin                          — composition root: настройки
 ├── Protection/BanGuard + BanList       — постоянный бан
 ├── Protection/DesyncFixer              — лечение «взбесившегося» тела другого игрока у тебя (рассинхрон после захода)
 ├── Protection/HostGuard                — захват хоста: запись, возврат, кик
+├── Protection/SentinelPresence         — метка Sentinel игрока, проверка хоста при входе
+├── Network/StateLedger + ForeignObjects — снимки/пропущенное для Unmute и Resync; удаление чужих объектов
 ├── Protection/PacketGate + MuteList    — каждое входящее событие Photon: mute игрока, флуд, захват чужого персонажа
 ├── Reporting/SuspicionReport           — запись находки: BepInEx-лог, DebugTrace, FindingLog, лента подключений
-└── Ui/SentinelWindow                   — окно F6 (Back)
-    ├── HotkeyButton, SettingsBinder, FeedOptions, FindingFeed, PlayerListView
+└── Ui/SentinelWindow                   — окно F6 (Back), получает SentinelSettings + WindowServices
+    ├── HotkeyButton, SettingsBinder, FeedOptions, FindingFeed
+    ├── PlayerListView → PlayerProfileView, общие действия PlayerActions
     └── Pages/ Log, Items, Cheats, Other, Players, Bans
 ```
 
@@ -42,7 +50,10 @@ SentinelPlugin                          — composition root: настройки
 ### Back
 | Class | File | Role |
 |---|---|---|
-| SentinelPlugin | SentinelPlugin.cs | Создаёт настройки, отчёт, BanList, связывает RpcRouter со всеми аудитами, вешает MonoBehaviour на скрытый DontDestroyOnLoad-объект, Harmony PatchAll |
+| SentinelPlugin | SentinelPlugin.cs | Composition root. `Awake`: SentinelSettings, DebugTrace, FindingLog, SuspicionReport, SentinelHooks, хост-объект, StateLedger/ForeignObjects/MuteList/LatencyMeter/SpawnClock; затем шаги `GuardPackets` (PacketGate), `AuditRpcs` (все IRpcAudit в RpcRouter, InstantiateAudit, HandGuard), `Watch` (MonoBehaviour-наблюдатели, BanList; возвращает WindowServices), `OpenWindow`; Harmony.PatchAll |
+| SentinelSettings | Settings/SentinelSettings.cs | Debug, Manager, Protection, Detection, Other, Flood, Flight, Stamina — создаются из ConfigFile в одном месте |
+| GameInternals | Game/GameInternals.cs | static: всё обращение к закрытым членам игры и PUN — Campfire.ALL_CAMPFIRES, RescueHook isPulling/targetPlayer, FrogTongue._targetCharacter, Skelleton.spawnedFromCharacter, RunManager.timerActive, PhotonNetwork.RemoveInstantiatedGO. Поля — кэшированные `AccessTools.FieldRef` (без поиска поля на каждый вызов) |
+| WindowServices | Ui/WindowServices.cs | Сервисы окна одним объектом: FindingLog, SuspicionReport, BanList, BanGuard, MuteList, ReportExport, LatencyMeter, DesyncFixer, SentinelPresence |
 | SentinelWindow | Ui/SentinelWindow.cs | Окно F6: клавиша открытия (или захват новой клавиши через HotkeyButton), Canvas строится при первом открытии и заново при смене шрифта, свой EventSystem если в сцене нет, вкладки, обновление открытой вкладки 4 раза в секунду; `IsOpen` читает патч курсора |
 | FlightAudit | Detection/Flight/FlightAudit.cs | 10 раз в секунду по каждому чужому персонажу: высота (своя сфера радиусом GroundProbeRadius вниз по всем физическим слоям, кроме персонажей — камни, брёвна и грибы лежат на Default — тонкий луч промахивался мимо уступа, когда игрок стоял краем ступни), вертикальная скорость по позициям, горизонтальная скорость; находки и откат «Snap back» |
 | StaminaAudit | Detection/Stamina/StaminaAudit.cs | 4 раза в секунду по каждому чужому персонажу: стамина (обычная + бонусная) из CharacterSyncer, пока игрок лезет (стена, верёвка, лиана) или бежит (isSprinting, на земле, быстрее MinSprintSpeed); если за усилие стамина не опустилась ниже минимума на MinDrop дольше FlagSeconds — подозрение «stamina does not go down», метка «infinite stamina», раз за усилие; не проверяется: мёртв/без сознания, аэропорт, эффекты InfiniteStamina/FasterBoi, стамина пуста; блокировать нельзя — стамина считается на клиенте игрока; строки STAMINA в PeakSentinel.log |
@@ -120,12 +131,13 @@ SentinelPlugin                          — composition root: настройки
 | SettingsBinder | Ui/SettingsBinder.cs | Галочки ↔ ConfigEntry, пара «проверка + вторая галочка справа» (BindPair), строка-подсказка под галочкой (Hint, HintScope): «If on: <что будет>» + ярлык охвата по текущей роли — зелёный «protects everyone», «protects only you», «only writes to the log», оранжевый «does nothing now: you are not the host», «not needed while you are the host»; не хосту у функций, которые как хост защищают всех, дописывается зелёное «(as host: protects everyone)»; обновляется вместе с галочками, зависимые галочки (гаснут), пометки «только у хоста» |
 | FeedOptions / FeedFilter / FindingFeed | Ui/ | Show notices, Follow newest, поиск (общий для вкладок), Clear; повторы одной находки за 30 с схлопываются в «×N (last …)»; лента кусками по 40 строк (лимит вершин TMP), цвет по виду находки, тексты в `<noparse>`; находка с починкой — отдельная строка с кнопкой Fix (не хосту — второе нажатие «Not host! Fix?»), после — «Fixed» |
 | PlayerListView, AvatarCache | Ui/ | Строки игроков (аватарка Steam, смайлик и цвет статуса, Mute у всех, Kick/Ban у хоста с подтверждением), профиль с лентой игрока и числом отброшенных пакетов |
+| PlayerActions / PlayerProfileView | Ui/ | Список (PlayerListView) и профиль игрока (PlayerProfileView) разделены; общие Mute/Kick/Ban с подтверждением, надписи кнопок, аватар и цвет статуса — PlayerActions |
 | Pages: LogPage, ItemsPage, CheatsPage, OtherPage, PlayersPage, BansPage | Ui/Pages/ | В шапке окна (SentinelWindow.ShowLobby, обновляется с окном раз в 0,25 с) — строка состояния лобби: зелёная «Lobby protected» (ты хост или у хоста Sentinel по SentinelPresence.Runs), оранжевая «Lobby not protected: host X has no Peak Sentinel», «Not in a lobby». Вкладки окна (ITabPage), общий PageContext, FeedSection = опции + лента. На Log — легенда цветов: точки (DotSprite, рисуется кодом) красная — чит или блок, оранжевая — подозрение, зелёная — Fix, коричневая — информация |
 
 ### Data / Settings
 | Class | Section | What it holds |
 |---|---|---|
-| FloodSettings | [Flood] | MaxRpcPerSecond 60, MaxSpawnsPerSecond 20, MaxObjectEventsPerSecond, FloodSeconds 15, MaxBuildsPerMinute 6 |
+| FloodSettings | [Flood] | MaxRpcPerSecond 60, MaxSpawnsPerSecond 20, MaxObjectEventsPerSecond, FloodSeconds 3, MaxBuildsPerMinute 6 |
 | ManagerSettings | [Manager] | ToggleKey (F6), MaxLogEntries (500, 50–5000) |
 | ProtectionSettings | [Protection] | BlockCheatSpawns, AllowMySpawns, RefuseForcedPickups (все вкл.) |
 | DetectionSettings | [Cheat detection] | HarmToOthers + BlockHarmToOthers, HostOnlyEvents + BlockHostOnlyEvents, DangerousSpawns + BlockDangerousSpawns, Flight + BlockFlight (выкл.), Stamina, SourcelessEffects (оба без блока), ForcedActions + BlockForcedActions, ObjectDestroy + BlockObjectDestroy, BuildSpam + BlockBuildSpam, NameSpoofing, Flood + MuteFlooders (выкл.), CharacterTakeover + BlockCharacterTakeover, CheatModMarkers + KickCheatModUsers |

@@ -1,5 +1,3 @@
-using PeakSentinel.Network;
-using PeakSentinel.Protection;
 using UnityEngine;
 
 namespace PeakSentinel.Ui.Pages
@@ -8,10 +6,10 @@ namespace PeakSentinel.Ui.Pages
     {
         private readonly PlayerListView _players;
 
-        public PlayersPage(PageContext context, Transform page, BanGuard banGuard, AvatarCache avatars, MuteList mutes, LatencyMeter latency, DesyncFixer desync, SentinelPresence presence)
+        public PlayersPage(PageContext context, Transform page, WindowServices services, AvatarCache avatars)
         {
             context.Binder.HostNote(page);
-            _players = new PlayerListView(context.Ui, page, context.Findings, context.Filter, banGuard, avatars, mutes, latency, desync, presence, context.Fix);
+            _players = new PlayerListView(context.Ui, page, context.Filter, services, avatars, context.Fix);
         }
 
         public void Refresh()

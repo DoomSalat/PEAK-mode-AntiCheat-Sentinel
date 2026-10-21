@@ -11,13 +11,13 @@ namespace PeakSentinel.Network
         private static readonly HashSet<string> SnapshotMethods = new HashSet<string> // Static: fixed RPCs that carry a full snapshot of a player's state, safe to apply again
         {
             RpcNames.SyncStatuses, RpcNames.SyncAfflictions, RpcNames.SyncPetrify, RpcNames.SyncInventory, RpcNames.EquipSlot, RpcNames.Crouch,
-            "SyncThornsRPC_Remote", "RPC_SetBlockedState",
+            RpcNames.SyncThorns, RpcNames.SetBlockedState,
         };
 
         private static readonly HashSet<string> EventMethods = new HashSet<string> // Static: fixed RPCs that change a player's state once, replayed only when missed under mute
         {
             RpcNames.Die, RpcNames.SetDead, RpcNames.ReviveAtPosition, RpcNames.PassOut, RpcNames.UnPassOut, RpcNames.UnFall,
-            "RPCA_Zombify", "CharacterDied", "CharacterPassedOut", "RPCA_InitGhost", "RPCA_SetTarget",
+            RpcNames.Zombify, RpcNames.ShownDead, RpcNames.ShownPassedOut, RpcNames.InitGhost, RpcNames.GhostTarget,
         };
 
         private readonly Dictionary<int, List<Entry>> _entries = new Dictionary<int, List<Entry>>();

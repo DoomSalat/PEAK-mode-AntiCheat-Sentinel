@@ -1,4 +1,4 @@
-using HarmonyLib;
+using PeakSentinel.Game;
 using PhotonPlayer = Photon.Realtime.Player;
 
 namespace PeakSentinel.Detection
@@ -6,9 +6,6 @@ namespace PeakSentinel.Detection
     public sealed class LegitForces
     {
         private const float ThrownReach = 6f;
-        private const string HookTargetField = "targetPlayer";
-        private const string HookPullingField = "isPulling";
-        private const string TongueTargetField = "_targetCharacter";
 
         private readonly ItemLocator _locator;
 
@@ -29,12 +26,12 @@ namespace PeakSentinel.Detection
                 if (item == null || item.photonView == null || item.photonView.OwnerActorNr != sender.ActorNumber)
                     continue;
 
-                if (item.TryGetComponent(out RescueHook hook) && Traverse.Create(hook).Field<bool>(HookPullingField).Value && Traverse.Create(hook).Field<Character>(HookTargetField).Value == victim)
+                if (item.TryGetComponent(out RescueHook hook) && GameInternals.IsPulling(hook, victim))
                     return true;
 
                 FrogTongue tongue = item.GetComponentInChildren<FrogTongue>();
 
-                if (tongue != null && Traverse.Create(tongue).Field<Character>(TongueTargetField).Value == victim)
+                if (tongue != null && GameInternals.TargetOf(tongue) == victim)
                     return true;
             }
 

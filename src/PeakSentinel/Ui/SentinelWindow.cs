@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using PeakSentinel.Network;
-using PeakSentinel.Protection;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
 using PeakSentinel.Ui.Pages;
@@ -39,19 +37,8 @@ namespace PeakSentinel.Ui
         private readonly List<(GameObject Root, ITabPage Page)> _pages = new List<(GameObject Root, ITabPage Page)>();
         private readonly List<Image> _tabImages = new List<Image>();
         private string _title;
-        private ManagerSettings _manager;
-        private ProtectionSettings _protection;
-        private DetectionSettings _detection;
-        private OtherSettings _other;
-        private FindingLog _findings;
-        private SuspicionReport _report;
-        private BanList _bans;
-        private BanGuard _banGuard;
-        private MuteList _mutes;
-        private ReportExport _export;
-        private LatencyMeter _latency;
-        private DesyncFixer _desync;
-        private SentinelPresence _presence;
+        private SentinelSettings _settings;
+        private WindowServices _services;
         private UiFactory _ui;
         private SettingsBinder _binder;
         private HotkeyButton _hotkey;
@@ -62,22 +49,11 @@ namespace PeakSentinel.Ui
 
         public bool IsOpen { get; private set; }
 
-        public void Initialize(string title, ManagerSettings manager, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, FindingLog findings, SuspicionReport report, BanList bans, BanGuard banGuard, MuteList mutes, ReportExport export, LatencyMeter latency, DesyncFixer desync, SentinelPresence presence)
+        public void Initialize(string title, SentinelSettings settings, WindowServices services)
         {
-            _presence = presence;
-            _desync = desync;
-            _latency = latency;
-            _export = export;
-            _mutes = mutes;
-            _report = report;
             _title = title;
-            _manager = manager;
-            _protection = protection;
-            _detection = detection;
-            _other = other;
-            _findings = findings;
-            _bans = bans;
-            _banGuard = banGuard;
+            _settings = settings;
+            _services = services;
         }
 
         private void Update()
@@ -89,7 +65,7 @@ namespace PeakSentinel.Ui
 
             if (_hotkey != null && _hotkey.Listening)
                 _hotkey.Capture(keyboard);
-            else if (_manager.ToggleKey.Value != Key.None && keyboard[_manager.ToggleKey.Value].wasPressedThisFrame)
+            else if (_settings.Manager.ToggleKey.Value != Key.None && keyboard[_settings.Manager.ToggleKey.Value].wasPressedThisFrame)
                 SwitchVisibility();
 
             if (IsOpen && Time.unscaledTime >= _nextRefresh)
@@ -150,13 +126,13 @@ namespace PeakSentinel.Ui
 
             RectTransform body = _ui.Column(layout, 0f, new RectOffset(0, 0, 0, 0));
             _ui.Flexible(body, 1f, 1f);
-            PageContext context = new PageContext(_ui, _binder, _filter, _findings, Refresh, Fix, ExportReport);
+            PageContext context = new PageContext(_ui, _binder, _filter, _services.Findings, Refresh, Fix, ExportReport);
             AddPage(body, page => new LogPage(context, page));
-            AddPage(body, page => new ItemsPage(context, page, _protection));
-            AddPage(body, page => new CheatsPage(context, page, _detection));
-            AddPage(body, page => new OtherPage(context, page, _other));
-            AddPage(body, page => new PlayersPage(context, page, _banGuard, _avatars, _mutes, _latency, _desync, _presence));
-            AddPage(body, page => new BansPage(_ui, page, _bans));
+            AddPage(body, page => new ItemsPage(context, page, _settings.Protection));
+            AddPage(body, page => new CheatsPage(context, page, _settings.Detection));
+            AddPage(body, page => new OtherPage(context, page, _settings.Other));
+            AddPage(body, page => new PlayersPage(context, page, _services, _avatars));
+            AddPage(body, page => new BansPage(_ui, page, _services.Bans));
             Select(_tab);
         }
 
@@ -170,7 +146,7 @@ namespace PeakSentinel.Ui
             _ui.Flexible(title, 1f, 0f);
             _lobby = _ui.Label(header, string.Empty, LobbySize, UiPalette.Notice, false);
             _lobby.alignment = TextAlignmentOptions.MidlineRight;
-            _hotkey = new HotkeyButton(_ui, header, _manager.ToggleKey);
+            _hotkey = new HotkeyButton(_ui, header, _settings.Manager.ToggleKey);
         }
 
         private void BuildTabs(Transform layout)
@@ -227,19 +203,19 @@ namespace PeakSentinel.Ui
                 return;
             }
 
-            bool guarded = _presence.Runs(host);
+            bool guarded = _services.Presence.Runs(host);
             _lobby.text = host.IsLocal ? HostIsYou : string.Format(guarded ? HostRuns : HostLacks, PlayerNames.Name(host));
             _lobby.color = guarded ? UiPalette.Clean : UiPalette.Suspicious;
         }
 
         private string ExportReport()
         {
-            return _export.Save(PhotonNetwork.CurrentRoom == null ? "none" : PhotonNetwork.CurrentRoom.Name);
+            return _services.Export.Save(PhotonNetwork.CurrentRoom == null ? "none" : PhotonNetwork.CurrentRoom.Name);
         }
 
         private void Fix(FindingLog.Finding finding)
         {
-            _report.Fix(finding);
+            _services.Report.Fix(finding);
             Refresh();
         }
 

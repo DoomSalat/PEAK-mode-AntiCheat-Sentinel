@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
+using PeakSentinel.Game;
 using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
 using Photon.Pun;
 using UnityEngine;
-using HarmonyLib;
 using Zorro.Core;
 
 namespace PeakSentinel.Detection
@@ -15,7 +15,6 @@ namespace PeakSentinel.Detection
         private const string WorldTag = "breaks host-only game events";
         private const int FlareLitKey = 3;
         private const float PeakCheckOffset = 10f;
-        private const string TimerActiveField = "timerActive";
         private const float StandingReach = 15f;
 
         private static readonly Dictionary<string, Rule[]> Rules = BuildRules(); // Static: fixed table of host-only RPCs (same as PEAKER)
@@ -138,7 +137,7 @@ namespace PeakSentinel.Detection
                 return null;
 
             float time = manager.TimeSinceRunStarted;
-            bool active = Traverse.Create(manager).Field<bool>(TimerActiveField).Value;
+            bool active = GameInternals.IsTimerActive(manager);
             return new Repair($"put the run timer back to {time:F0} s", () => view.RPC(RpcNames.SyncRunTime, RpcTarget.All, time, active));
         }
 
@@ -167,33 +166,33 @@ namespace PeakSentinel.Detection
         {
             Dictionary<string, Rule[]> rules = new Dictionary<string, Rule[]>();
             Add(rules, RpcNames.TriggerBanana, typeof(BananaPeel), Sender.Victim, "made slip on a banana:");
-            Add(rules, "DisperseRPC", typeof(BeeSwarm), Sender.Host, "dispersed a bee swarm");
-            Add(rules, "SetBeesAngryRPC", typeof(BeeSwarm), Sender.Host, "changed a bee swarm's anger");
+            Add(rules, RpcNames.DisperseBees, typeof(BeeSwarm), Sender.Host, "dispersed a bee swarm");
+            Add(rules, RpcNames.AngerBees, typeof(BeeSwarm), Sender.Host, "changed a bee swarm's anger");
             Add(rules, RpcNames.TriggerHelicopter, typeof(Flare), Sender.Host, "triggered the rescue helicopter");
             Add(rules, RpcNames.LightFlare, typeof(Flare), Sender.Owner, "lit the flare of", true);
             Add(rules, RpcNames.ExtinguishCampfire, typeof(Campfire), Sender.Host, "tried to extinguish a campfire");
-            Add(rules, "RPCEndGame", typeof(Character), Sender.Host, "forced the game to end");
-            Add(rules, "RPCEndGame_ForceWin", typeof(Character), Sender.Host, "forced a win");
-            Add(rules, "RPCA_InitGhost", typeof(PlayerGhost), Sender.Owner, "took over the ghost of", true);
-            Add(rules, "RPCA_SetTarget", typeof(PlayerGhost), Sender.Owner, "controlled the ghost of", true);
-            Add(rules, "RPCA_SpawnEruption", typeof(EruptionSpawner), Sender.Host, "spawned a volcano eruption");
-            Add(rules, "RPC_GrowVine", typeof(MagicBeanVine), Sender.Host, "grew a magic bean vine");
+            Add(rules, RpcNames.EndGame, typeof(Character), Sender.Host, "forced the game to end");
+            Add(rules, RpcNames.ForceWin, typeof(Character), Sender.Host, "forced a win");
+            Add(rules, RpcNames.InitGhost, typeof(PlayerGhost), Sender.Owner, "took over the ghost of", true);
+            Add(rules, RpcNames.GhostTarget, typeof(PlayerGhost), Sender.Owner, "controlled the ghost of", true);
+            Add(rules, RpcNames.SpawnEruption, typeof(EruptionSpawner), Sender.Host, "spawned a volcano eruption");
+            Add(rules, RpcNames.GrowVine, typeof(MagicBeanVine), Sender.Host, "grew a magic bean vine");
             Add(rules, RpcNames.StartFog, typeof(OrbFogHandler), Sender.Host, "started the fog");
             Add(rules, RpcNames.SyncFog, typeof(OrbFogHandler), Sender.Host, "moved the fog");
-            Add(rules, "BeginIslandLoadRPC", typeof(AirportCheckInKiosk), Sender.Host, "started the run from the airport");
-            Add(rules, "BeginAirportLoadRPC", typeof(GameOverHandler), Sender.Host, "sent everyone back to the airport");
-            Add(rules, "ShakeBridge_Rpc", typeof(BreakableBridge), Sender.Host, "shook a bridge");
-            Add(rules, "Fall_Rpc", typeof(BreakableBridge), Sender.Host, "broke a bridge");
-            Add(rules, "Detach_Rpc", typeof(Rope), Sender.Owner, "detached a rope");
-            Add(rules, "ShakeRock", typeof(ShakyIcicleIce), Sender.Standing, "shook an icicle from afar");
-            Add(rules, "ShakeRock", typeof(ShakyRock), Sender.Standing, "shook a rock from afar");
-            Add(rules, "RPCA_StartBreaking", typeof(ShittyPiton), Sender.Owner, "started breaking a piton of", true);
-            Add(rules, "RPCA_Break", typeof(ShittyPiton), Sender.Owner, "broke a piton of", true);
+            Add(rules, RpcNames.StartIsland, typeof(AirportCheckInKiosk), Sender.Host, "started the run from the airport");
+            Add(rules, RpcNames.BackToAirport, typeof(GameOverHandler), Sender.Host, "sent everyone back to the airport");
+            Add(rules, RpcNames.ShakeBridge, typeof(BreakableBridge), Sender.Host, "shook a bridge");
+            Add(rules, RpcNames.BreakBridge, typeof(BreakableBridge), Sender.Host, "broke a bridge");
+            Add(rules, RpcNames.DetachRope, typeof(Rope), Sender.Owner, "detached a rope");
+            Add(rules, RpcNames.ShakeRock, typeof(ShakyIcicleIce), Sender.Standing, "shook an icicle from afar");
+            Add(rules, RpcNames.ShakeRock, typeof(ShakyRock), Sender.Standing, "shook a rock from afar");
+            Add(rules, RpcNames.StartBreakingPiton, typeof(ShittyPiton), Sender.Owner, "started breaking a piton of", true);
+            Add(rules, RpcNames.BreakPiton, typeof(ShittyPiton), Sender.Owner, "broke a piton of", true);
             Add(rules, RpcNames.SyncDayTime, typeof(DayNightManager), Sender.Host, "changed the time of day");
             Add(rules, RpcNames.SyncAscent, typeof(GameUtils), Sender.Host, "changed the ascent (difficulty)");
-            Add(rules, "RPC_SyncRunSettings", typeof(GameUtils), Sender.Host, "changed the run settings");
-            Add(rules, "RPC_SpawnResourceAtPosition", typeof(GameUtils), Sender.Host, "spawned a resource");
-            Add(rules, "RPC_SyncLava", typeof(LavaRising), Sender.Host, "moved the lava");
+            Add(rules, RpcNames.SyncRunSettings, typeof(GameUtils), Sender.Host, "changed the run settings");
+            Add(rules, RpcNames.SpawnResource, typeof(GameUtils), Sender.Host, "spawned a resource");
+            Add(rules, RpcNames.SyncLava, typeof(LavaRising), Sender.Host, "moved the lava");
             Add(rules, RpcNames.InitFog, typeof(OrbFogHandler), Sender.Host, "reset the fog");
             Add(rules, RpcNames.SyncRunTime, typeof(RunManager), Sender.Host, "changed the run timer");
             return rules;

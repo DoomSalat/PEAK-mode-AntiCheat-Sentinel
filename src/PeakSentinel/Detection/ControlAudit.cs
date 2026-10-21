@@ -23,13 +23,13 @@ namespace PeakSentinel.Detection
             { RpcNames.SyncStatuses, "show fake statuses" },
             { RpcNames.ApplyStatuses, "get statuses" },
             { RpcNames.UnPassOut, "wake up" },
-            { "StopVineClimbingRpc", "let go of the vine" },
-            { "RPCA_ClimbJump", "jump off the wall" },
-            { "RPCA_Stick", "get stuck" },
-            { "RPCA_ClearStickData", "come unstuck" },
-            { "RPCA_ClearJoint", "come unstuck" },
-            { "DestroyHeldItemRpc", "lose the item in hand" },
-            { "DropItemRpc", "throw an item" },
+            { RpcNames.StopVineClimbing, "let go of the vine" },
+            { RpcNames.ClimbJump, "jump off the wall" },
+            { RpcNames.Stick, "get stuck" },
+            { RpcNames.ClearStickData, "come unstuck" },
+            { RpcNames.ClearJoint, "come unstuck" },
+            { RpcNames.DestroyHeldItem, "lose the item in hand" },
+            { RpcNames.ThrowItem, "throw an item" },
         };
 
         private readonly SuspicionReport _report;

@@ -19,7 +19,7 @@ namespace PeakSentinel
     {
         public const string Guid = "peaksentinel";
         public const string Name = "Peak Sentinel";
-        public const string Version = "1.0.4";
+        public const string Version = "1.0.5";
 
         private const string TraceFile = "PeakSentinel.log";
         private const string BansFile = "PeakSentinel.bans.txt";
@@ -29,53 +29,30 @@ namespace PeakSentinel
 
         private void Awake()
         {
-            DebugSettings debug = new DebugSettings(Config, TraceFile);
-            ManagerSettings manager = new ManagerSettings(Config);
-            ProtectionSettings protection = new ProtectionSettings(Config);
-            DetectionSettings detection = new DetectionSettings(Config);
-            OtherSettings other = new OtherSettings(Config);
-
-            _trace = new DebugTrace(Path.Combine(Paths.BepInExRootPath, TraceFile), debug.TraceFile, debug.TraceAllRpcs);
-            FindingLog findings = new FindingLog(manager.LogEntries);
+            SentinelSettings settings = new SentinelSettings(Config, TraceFile);
+            _trace = new DebugTrace(Path.Combine(Paths.BepInExRootPath, TraceFile), settings.Debug.TraceFile, settings.Debug.TraceAllRpcs);
+            FindingLog findings = new FindingLog(settings.Manager.LogEntries);
             SuspicionReport report = new SuspicionReport(Logger, _trace, findings);
             SentinelHooks.Findings = findings;
-            BanList bans = new BanList(Path.Combine(Paths.ConfigPath, BansFile));
+            SentinelHooks.Report = report;
+            SentinelHooks.Environment = new EnvironmentMarks();
+
+            GameObject host = new GameObject(Name) { hideFlags = HideFlags.HideAndDontSave };
+            DontDestroyOnLoad(host);
             ForeignObjects objects = new ForeignObjects();
             StateLedger ledger = new StateLedger(objects);
             MuteList mutes = new MuteList(report, ledger);
-            SentinelHooks.Mutes = mutes;
-            FloodSettings flood = new FloodSettings(Config);
             LatencyMeter latency = new LatencyMeter();
-            SentinelHooks.Gate = new PacketGate(report, detection, flood, mutes, latency);
-            GameObject host = new GameObject(Name) { hideFlags = HideFlags.HideAndDontSave };
-            DontDestroyOnLoad(host);
             SpawnClock spawns = host.AddComponent<SpawnClock>();
-            ItemRpcAudit items = new ItemRpcAudit(report, protection, spawns, new BackpackSwap());
-            ItemLocator locator = new ItemLocator();
-            AreaEffects areas = new AreaEffects(locator);
-            EffectAudit effects = host.AddComponent<EffectAudit>();
-            effects.Initialize(report, _trace, detection, items, areas);
-            StatusAudit statuses = host.AddComponent<StatusAudit>();
-            statuses.Initialize(report, detection, locator);
-            WireNetwork(report, protection, detection, other, flood, items, locator, areas, effects, statuses, spawns, ledger, objects);
-            host.AddComponent<HostGuard>().Initialize(report, other);
-            SentinelPresence presence = host.AddComponent<SentinelPresence>();
-            presence.Initialize(report, Version);
-            DesyncFixer desync = host.AddComponent<DesyncFixer>();
-            desync.Initialize(report, other, ledger);
-            BanGuard banGuard = host.AddComponent<BanGuard>();
-            banGuard.Initialize(report, bans);
-            host.AddComponent<CheatModScan>().Initialize(report, detection);
-            host.AddComponent<IdentityAudit>().Initialize(report, detection);
-            host.AddComponent<FlightAudit>().Initialize(report, _trace, detection, new FlightSettings(Config), new FlightExemptions(new RopeLinks(), SentinelHooks.Environment, spawns));
-            host.AddComponent<StaminaAudit>().Initialize(report, _trace, detection, new StaminaSettings(Config));
-            SentinelWindow window = host.AddComponent<SentinelWindow>();
-            window.Initialize($"{Name} {Version}", manager, protection, detection, other, findings, report, bans, banGuard, mutes, new ReportExport(Paths.BepInExRootPath, findings), latency, desync, presence);
-            SentinelHooks.Window = window;
+
+            GuardPackets(settings, report, mutes, latency);
+            AuditRpcs(host, settings, report, spawns, ledger, objects);
+            WindowServices services = Watch(host, settings, report, findings, mutes, latency, ledger, spawns);
+            OpenWindow(host, settings, services);
 
             _harmony = new Harmony(Guid);
             _harmony.PatchAll(typeof(SentinelPlugin).Assembly);
-            Logger.LogInfo($"{Name} {Version} loaded: block cheat spawns {protection.BlockCheatSpawns.Value}, trace in {_trace.Path}");
+            Logger.LogInfo($"{Name} {Version} loaded: block cheat spawns {settings.Protection.BlockCheatSpawns.Value}, trace in {_trace.Path}");
         }
 
         private void OnDestroy()
@@ -84,28 +61,65 @@ namespace PeakSentinel
             _trace?.Dispose();
         }
 
-        private void WireNetwork(SuspicionReport report, ProtectionSettings protection, DetectionSettings detection, OtherSettings other, FloodSettings flood, ItemRpcAudit items, ItemLocator locator, AreaEffects areas, EffectAudit effects, StatusAudit statuses, SpawnClock spawns, StateLedger ledger, ForeignObjects objects)
+        private void GuardPackets(SentinelSettings settings, SuspicionReport report, MuteList mutes, LatencyMeter latency)
         {
+            SentinelHooks.Mutes = mutes;
+            SentinelHooks.Gate = new PacketGate(report, settings.Detection, settings.Flood, mutes, latency);
+        }
+
+        private void AuditRpcs(GameObject host, SentinelSettings settings, SuspicionReport report, SpawnClock spawns, StateLedger ledger, ForeignObjects objects)
+        {
+            DetectionSettings detection = settings.Detection;
+            ItemLocator locator = new ItemLocator();
             LegitForces forces = new LegitForces(locator);
-            HandGuard hands = new HandGuard(report, protection);
-            SentinelHooks.Report = report;
-            SentinelHooks.Environment = new EnvironmentMarks();
+            AreaEffects areas = new AreaEffects(locator);
+            ItemRpcAudit items = new ItemRpcAudit(report, settings.Protection, spawns, new BackpackSwap());
+            HandGuard hands = new HandGuard(report, settings.Protection);
+            EffectAudit effects = host.AddComponent<EffectAudit>();
+            effects.Initialize(report, _trace, detection, items, areas);
+            StatusAudit statuses = host.AddComponent<StatusAudit>();
+            statuses.Initialize(report, detection, locator);
+
             SentinelHooks.Hands = hands;
-            SentinelHooks.Instantiate = new InstantiateAudit(report, _trace, detection, protection, items, objects, locator);
+            SentinelHooks.Instantiate = new InstantiateAudit(report, _trace, detection, settings.Protection, items, objects, locator);
             SentinelHooks.Router = new RpcRouter(_trace, ledger,
                 items,
                 hands,
-                new KickShield(report, other),
+                new KickShield(report, settings.Other),
                 new HarmAudit(report, detection, locator, forces),
                 new WorldAudit(report, detection),
                 new ControlAudit(report, detection),
                 new CarryAudit(report, detection),
-                new BuildAudit(report, detection, flood),
+                new BuildAudit(report, detection, settings.Flood),
                 new ReviveAudit(report, detection, spawns),
                 new PushAudit(report, detection, forces),
                 areas,
                 effects,
                 statuses);
+        }
+
+        private WindowServices Watch(GameObject host, SentinelSettings settings, SuspicionReport report, FindingLog findings, MuteList mutes, LatencyMeter latency, StateLedger ledger, SpawnClock spawns)
+        {
+            BanList bans = new BanList(Path.Combine(Paths.ConfigPath, BansFile));
+            host.AddComponent<HostGuard>().Initialize(report, settings.Other);
+            SentinelPresence presence = host.AddComponent<SentinelPresence>();
+            presence.Initialize(report, Version);
+            DesyncFixer desync = host.AddComponent<DesyncFixer>();
+            desync.Initialize(report, settings.Other, ledger);
+            BanGuard banGuard = host.AddComponent<BanGuard>();
+            banGuard.Initialize(report, bans);
+            host.AddComponent<CheatModScan>().Initialize(report, settings.Detection);
+            host.AddComponent<IdentityAudit>().Initialize(report, settings.Detection);
+            host.AddComponent<FlightAudit>().Initialize(report, _trace, settings.Detection, settings.Flight, new FlightExemptions(new RopeLinks(), SentinelHooks.Environment, spawns));
+            host.AddComponent<StaminaAudit>().Initialize(report, _trace, settings.Detection, settings.Stamina);
+            return new WindowServices(findings, report, bans, banGuard, mutes, new ReportExport(Paths.BepInExRootPath, findings), latency, desync, presence);
+        }
+
+        private void OpenWindow(GameObject host, SentinelSettings settings, WindowServices services)
+        {
+            SentinelWindow window = host.AddComponent<SentinelWindow>();
+            window.Initialize($"{Name} {Version}", settings, services);
+            SentinelHooks.Window = window;
         }
     }
 }

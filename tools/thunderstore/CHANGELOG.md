@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5
+
+- Internal clean-up, no change in what Sentinel detects or blocks. Checks of pushes and thrown items are faster, and access to the game's internal data is kept in one place, so the mod is quicker to fix after a PEAK update.
+- The mod description now says where to send logs about a false alarm or a missed spawn.
+
 ## 1.0.4
 
 - The manager window header always shows whether the lobby is protected (does the host run Peak Sentinel) and updates when the host changes.
