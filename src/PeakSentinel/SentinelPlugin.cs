@@ -21,7 +21,7 @@ namespace PeakSentinel
     {
         public const string Guid = "peaksentinel";
         public const string Name = "Peak Sentinel";
-        public const string Version = "1.1.1";
+        public const string Version = "1.1.2";
 
         private const string TraceFile = "PeakSentinel.log";
         private const string BansFile = "PeakSentinel.bans.txt";
@@ -127,6 +127,7 @@ namespace PeakSentinel
             host.AddComponent<CheatModScan>().Initialize(report, settings.Detection);
             host.AddComponent<IdentityAudit>().Initialize(report, settings.Detection);
             SentinelHooks.Invisibility = new InvisibilityAudit(report, settings.Detection);
+            SentinelHooks.BodySync = new BodySyncGuard(report);
             FlightAudit flight = host.AddComponent<FlightAudit>();
             flight.Initialize(report, _trace, settings.Detection, settings.Flight, new FlightExemptions(new RopeLinks(), SentinelHooks.Environment, spawns, ascent));
             StaminaAudit stamina = host.AddComponent<StaminaAudit>();

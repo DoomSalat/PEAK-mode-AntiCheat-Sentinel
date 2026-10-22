@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.2
+
+- More crash protection: broken run settings (also when a client asks the host to start the run), broken map item data and NaN or infinite body positions are always refused. Hiding the map's loose items is now host-only.
+- Invisibility (Admin_menukz) is now really undone: the invisible player's body is moved to where they stand. In 1.1.1 it was only reported.
+
 ## 1.1.1
 
 - A skeleton killed by a cheater is revived as a skeleton again: the host gives the skeleton back a second after the last kill (the victim's own game resets it on death; a kill spam keeps pushing it back) and logs it separately. No extra curse is added: the revive carries no revival penalty.

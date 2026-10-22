@@ -21,30 +21,30 @@ namespace PeakSentinel.Detection
             _detection = detection;
         }
 
-        public void Reveal(Character character, ref CharacterSyncData data)
+        public bool Reveal(Character character, ref CharacterSyncData data)
         {
             if (character == null || character.IsLocal || character.isBot)
-                return;
+                return false;
 
             int actor = character.photonView.Owner.ActorNumber;
 
             if (data.hipLocation.y >= HiddenHeight)
             {
                 _hidden.Remove(actor);
-                return;
+                return false;
             }
 
             if (!_detection.Flight.Value)
-                return;
+                return false;
 
             float sentHeight = data.hipLocation.y;
             data.hipLocation = data.isClimbing ? data.climbPos : data.groundPos + new float3(0f, HipHeight, 0f);
 
             if (!_hidden.Add(actor))
-                return;
+                return true;
 
-            _report.Tag(character.photonView.Owner, Tag);
-            _report.Flag(character.photonView.Owner, FindingCategory.Cheats, $"turned invisible: sent their position as {sentHeight:F0} m below the map (Admin_menukz invisibility), shown where they stand instead", true);
+            _report.Block(character.photonView.Owner, FindingCategory.Cheats, Tag, $"turned invisible: sent their position as {sentHeight:F0} m below the map (Admin_menukz invisibility), shown where they stand instead");
+            return true;
         }
     }
 }

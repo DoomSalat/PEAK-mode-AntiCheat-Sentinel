@@ -3,6 +3,7 @@ using HarmonyLib;
 using PeakSentinel.Network;
 using Photon.Pun;
 using UnityEngine;
+using Zorro.Core;
 using PhotonPlayer = Photon.Realtime.Player;
 using PunInstantiateParameters = Photon.Pun.InstantiateParameters;
 
@@ -55,7 +56,11 @@ namespace PeakSentinel.Patches
         [HarmonyPatch(typeof(CharacterSyncer), nameof(CharacterSyncer.OnDataReceived))]
         public static void RevealHidden(CharacterSyncer __instance, ref CharacterSyncData data)
         {
-            SentinelHooks.Invisibility?.Reveal(__instance.m_character, ref data);
+            bool repaired = SentinelHooks.BodySync != null && SentinelHooks.BodySync.Repair(__instance.m_character, ref data);
+            bool revealed = SentinelHooks.Invisibility != null && SentinelHooks.Invisibility.Reveal(__instance.m_character, ref data);
+
+            if (repaired || revealed)
+                __instance.RemoteValue = Optionable<CharacterSyncData>.Some(data); // The body follows the stored copy, which the game saved before calling this
         }
 
         [HarmonyPostfix]

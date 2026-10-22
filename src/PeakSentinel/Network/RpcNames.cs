@@ -75,6 +75,8 @@ namespace PeakSentinel.Network
         public const string SpawnEruption = "RPCA_SpawnEruption";
         public const string GrowVine = "RPC_GrowVine";
         public const string StartIsland = "BeginIslandLoadRPC";
+        public const string AskIslandStart = "LoadIslandMaster";
+        public const string SyncFakeItems = "RPC_SyncFakeItems";
         public const string BackToAirport = "BeginAirportLoadRPC";
         public const string ShakeBridge = "ShakeBridge_Rpc";
         public const string BreakBridge = "Fall_Rpc";

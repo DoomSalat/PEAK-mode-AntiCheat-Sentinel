@@ -209,6 +209,7 @@ namespace PeakSentinel.Detection
             Add(rules, RpcNames.SyncDayTime, typeof(DayNightManager), Sender.Host, "changed the time of day");
             Add(rules, RpcNames.SyncAscent, typeof(GameUtils), Sender.Host, "changed the ascent (difficulty)");
             Add(rules, RpcNames.SyncRunSettings, typeof(GameUtils), Sender.Host, "changed the run settings");
+            Add(rules, RpcNames.SyncFakeItems, typeof(FakeItemManager), Sender.Host, "hid the map's loose items for you");
             Add(rules, RpcNames.SpawnResource, typeof(GameUtils), Sender.Host, "spawned a resource");
             Add(rules, RpcNames.SyncLava, typeof(LavaRising), Sender.Host, "moved the lava");
             Add(rules, RpcNames.InitFog, typeof(OrbFogHandler), Sender.Host, "reset the fog");

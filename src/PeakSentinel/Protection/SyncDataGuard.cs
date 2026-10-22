@@ -12,6 +12,10 @@ namespace PeakSentinel.Protection
         private const string Statuses = "status";
         private const string Afflictions = "effect";
         private const string Inventory = "inventory";
+        private const string RunSettings = "run settings";
+        private const string FakeItems = "map item";
+        private const int IslandSettingsIndex = 2;
+        private const int AskedSettingsIndex = 1;
 
         private readonly SuspicionReport _report;
 
@@ -22,7 +26,8 @@ namespace PeakSentinel.Protection
 
         public bool Watches(string method)
         {
-            return method == RpcNames.SyncThorns || method == RpcNames.SyncStatuses || method == RpcNames.SyncAfflictions || method == RpcNames.SyncInventory;
+            return method == RpcNames.SyncThorns || method == RpcNames.SyncStatuses || method == RpcNames.SyncAfflictions || method == RpcNames.SyncInventory
+                || method == RpcNames.SyncRunSettings || method == RpcNames.StartIsland || method == RpcNames.AskIslandStart || method == RpcNames.SyncFakeItems;
         }
 
         public bool Inspect(RpcCall call)
@@ -35,14 +40,15 @@ namespace PeakSentinel.Protection
             if (broken == null)
                 return true;
 
-            return _report.Refuse(call.Sender, FindingCategory.Cheats, Tag, $"sent broken {broken} data for {PlayerNames.Name(call.Owner)} (it would throw errors or crash the game), always blocked", true);
+            string whose = broken == RunSettings || broken == FakeItems ? string.Empty : $" for {PlayerNames.Name(call.Owner)}";
+            return _report.Block(call.Sender, FindingCategory.Cheats, Tag, $"sent broken {broken} data{whose} (it would throw errors or crash the game), always blocked");
         }
 
         private string BrokenPart(RpcCall call)
         {
             string part = PartOf(call.Method);
 
-            if (!(call.Argument(0) is byte[] data))
+            if (!(call.Argument(DataIndexOf(call.Method)) is byte[] data))
                 return part;
 
             try
@@ -69,9 +75,32 @@ namespace PeakSentinel.Protection
                 case RpcNames.SyncAfflictions:
                     return IBinarySerializable.GetFromManagedArray<AfflictionSyncData>(data).afflictions != null;
 
+                case RpcNames.SyncRunSettings:
+                case RpcNames.StartIsland:
+                case RpcNames.AskIslandStart:
+                    return IBinarySerializable.GetFromManagedArray<RunSettingSyncData>(data).settingValues != null;
+
+                case RpcNames.SyncFakeItems:
+                    return IBinarySerializable.GetFromManagedArray<FakeItemManager.FakeItemData>(data).hiddenItems != null;
+
                 default:
                     Player player = call.Component<Player>();
                     return player == null || IBinarySerializable.GetFromManagedArray<InventorySyncData>(data).slots.Length >= player.itemSlots.Length;
+            }
+        }
+
+        private int DataIndexOf(string method)
+        {
+            switch (method)
+            {
+                case RpcNames.StartIsland:
+                    return IslandSettingsIndex;
+
+                case RpcNames.AskIslandStart:
+                    return AskedSettingsIndex;
+
+                default:
+                    return 0;
             }
         }
 
@@ -87,6 +116,14 @@ namespace PeakSentinel.Protection
 
                 case RpcNames.SyncAfflictions:
                     return Afflictions;
+
+                case RpcNames.SyncRunSettings:
+                case RpcNames.StartIsland:
+                case RpcNames.AskIslandStart:
+                    return RunSettings;
+
+                case RpcNames.SyncFakeItems:
+                    return FakeItems;
 
                 default:
                     return Inventory;
