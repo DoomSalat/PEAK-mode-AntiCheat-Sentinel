@@ -2,6 +2,7 @@
 
 ## 1.1.1
 
+- A skeleton killed by a cheater is revived as a skeleton again: the host gives the skeleton back a second after the last kill (the victim's own game resets it on death; a kill spam keeps pushing it back) and logs it separately. No extra curse is added: the revive carries no revival penalty.
 - Being shot from a scout cannon is no longer reported as flying or moving too fast.
 - Jetpack and rocket pack flights are no longer reported as flying or moving too fast.
 - Flood check: wind on the Alpine biome makes every player send a force command about 50 times a second (even with no wind); these no longer count as a flood. Flood findings now list the commands sent most.

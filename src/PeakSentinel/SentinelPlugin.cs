@@ -99,7 +99,7 @@ namespace PeakSentinel
                 items,
                 hands,
                 new KickShield(report, settings.Other, ascent, kicks),
-                new HarmAudit(report, guard, detection, locator, forces, cooking, ascent, cheatKills),
+                new HarmAudit(report, guard, detection, locator, forces, cooking, ascent, cheatKills, host.AddComponent<DelayedCalls>()),
                 new WorldAudit(report, guard, detection),
                 new ControlAudit(guard, detection),
                 new CarryAudit(guard, detection),

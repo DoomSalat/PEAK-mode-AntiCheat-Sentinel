@@ -5,6 +5,7 @@ using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
 using Photon.Pun;
 using UnityEngine;
+using PhotonPlayer = Photon.Realtime.Player;
 
 namespace PeakSentinel.Detection
 {
@@ -24,6 +25,7 @@ namespace PeakSentinel.Detection
         private const float HungerMargin = 0.05f;
         private const float ZombieSpores = 0.4f;
         private const string SelfTeleportTag = "teleports themselves";
+        private const float SkeletonReturnSeconds = 1f;
 
         private static readonly HashSet<string> Methods = new HashSet<string> // Static: fixed set of RPC names that can harm another player
         {
@@ -35,12 +37,14 @@ namespace PeakSentinel.Detection
         private readonly CookingEchoes _cooking;
         private readonly TrueAscentState _ascent;
         private readonly CheatKills _kills;
+        private readonly DelayedCalls _later;
         private readonly SuspicionReport _report;
         private readonly VictimGuard _guard;
         private readonly DetectionSettings _detection;
 
-        public HarmAudit(SuspicionReport report, VictimGuard guard, DetectionSettings detection, ItemLocator locator, LegitForces forces, CookingEchoes cooking, TrueAscentState ascent, CheatKills kills)
+        public HarmAudit(SuspicionReport report, VictimGuard guard, DetectionSettings detection, ItemLocator locator, LegitForces forces, CookingEchoes cooking, TrueAscentState ascent, CheatKills kills, DelayedCalls later)
         {
+            _later = later;
             _guard = guard;
             _kills = kills;
             _ascent = ascent;
@@ -206,16 +210,34 @@ namespace PeakSentinel.Detection
         private bool RefuseKill(RpcCall call, Character character, string victim)
         {
             _kills.Note(character);
-            return Refuse(call, character, KillsTag, $"killed {victim}", Revive(character, victim));
+            return Refuse(call, character, KillsTag, $"killed {victim}", Revive(call.Sender, character, victim));
         }
 
-        private Recovery Revive(Character character, string victim)
+        private Recovery Revive(PhotonPlayer culprit, Character character, string victim)
         {
             if (character == null)
                 return null;
 
             Vector3 place = character.Center;
-            return new Recovery($"revived {victim} where they stood", target => character.photonView.RPC(RpcNames.ReviveAtPosition, target, place, false, -1), true);
+            int viewId = character.photonView.ViewID;
+            bool skeleton = character.data.isSkeleton || _later.Pending(viewId);
+
+            return new Recovery($"revived {victim} where they stood", target =>
+            {
+                character.photonView.RPC(RpcNames.ReviveAtPosition, target, place, false, -1);
+
+                if (skeleton)
+                    _later.After(viewId, SkeletonReturnSeconds, () => ReturnSkeleton(culprit, character, victim, target)); // The victim's own death resets the skeleton for everyone: wait for that reset, and for the last kill of a spam
+            }, true);
+        }
+
+        private void ReturnSkeleton(PhotonPlayer culprit, Character character, string victim, RpcTarget target)
+        {
+            if (character == null || character.data.dead)
+                return;
+
+            character.photonView.RPC(RpcNames.SyncSkeleton, target, true);
+            _report.Recover(culprit, FindingCategory.Cheats, KillsTag, $"killed {victim} as a skeleton, gave the skeleton back {(target == RpcTarget.All ? "for everyone" : "on everyone else's screen")}");
         }
 
         private Recovery Unpetrify(Character character, string victim)
