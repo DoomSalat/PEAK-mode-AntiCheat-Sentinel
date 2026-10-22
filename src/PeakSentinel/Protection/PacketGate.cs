@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Linq;
 using ExitGames.Client.Photon;
+using PeakSentinel.Detection.Flight;
 using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
@@ -19,24 +21,31 @@ namespace PeakSentinel.Protection
         private const string DestroyTag = "destroys other players' objects";
         private const float JoinGraceSeconds = 15f;
         private const float CheckpointGraceSeconds = 20f;
+        private const int TopKinds = 3;
+        private const string SpawnKind = "spawn";
+        private const string ObjectKind = "object change";
+        private const string UnknownRpc = "unknown RPC";
 
-        private static readonly HashSet<string> FrameSyncMethods = new HashSet<string> // Static: fixed RPCs the game sends every frame while a status or effect changes, never a flood
+        private static readonly HashSet<string> FrameSyncMethods = new HashSet<string> // Static: fixed RPCs the game sends every frame while a status or effect changes, not a flood when they come from the owner
         {
             RpcNames.SyncAfflictions, RpcNames.SyncStatuses, RpcNames.SyncThorns,
         };
 
         private readonly Dictionary<int, (float Start, int Rpcs, int Spawns, int Objects, int Streak, float Reported)> _rates = new Dictionary<int, (float Start, int Rpcs, int Spawns, int Objects, int Streak, float Reported)>();
+        private readonly Dictionary<int, Dictionary<string, int>> _kinds = new Dictionary<int, Dictionary<string, int>>();
         private readonly SuspicionReport _report;
         private readonly DetectionSettings _detection;
         private readonly FloodSettings _flood;
         private readonly MuteList _mutes;
         private readonly LatencyMeter _latency;
+        private readonly EnvironmentMarks _traps;
         private string _room;
         private Segment _segment;
         private float _calmAt;
 
-        public PacketGate(SuspicionReport report, DetectionSettings detection, FloodSettings flood, MuteList mutes, LatencyMeter latency)
+        public PacketGate(SuspicionReport report, DetectionSettings detection, FloodSettings flood, MuteList mutes, LatencyMeter latency, EnvironmentMarks traps)
         {
+            _traps = traps;
             _latency = latency;
             _report = report;
             _detection = detection;
@@ -65,8 +74,8 @@ namespace PeakSentinel.Protection
             if ((data.Code == PunCodes.SerializeEvent || data.Code == PunCodes.SerializeReliableEvent) && data.CustomData is object[] serialized && serialized.Length > 0 && serialized[0] is int sentAt)
                 _latency.Note(actor, sentAt);
 
-            if (!sender.IsMasterClient && !InGracePeriod() && !IsCached(data) && !IsFrameSync(data))
-                CountRate(sender, data.Code);
+            if (!sender.IsMasterClient && !InGracePeriod() && !IsCached(data) && !IsFrameSync(data, sender))
+                CountRate(sender, data);
 
             if (data.Code == PunCodes.OwnershipRequestEvent || data.Code == PunCodes.OwnershipTransferEvent)
                 return CheckTakeover(sender, data.CustomData as int[]);
@@ -98,9 +107,25 @@ namespace PeakSentinel.Protection
             return Time.unscaledTime < _calmAt;
         }
 
-        private bool IsFrameSync(EventData data)
+        private bool IsFrameSync(EventData data, PhotonPlayer sender)
         {
-            return data.Code == PunCodes.RpcEvent && data.CustomData is Hashtable rpc && FrameSyncMethods.Contains(RpcRouter.MethodOf(rpc) ?? string.Empty);
+            if (data.Code != PunCodes.RpcEvent || !(data.CustomData is Hashtable rpc))
+                return false;
+
+            string method = RpcRouter.MethodOf(rpc) ?? string.Empty;
+            return ((FrameSyncMethods.Contains(method) || method == RpcNames.ForceAtPosition) && IsOwnView(rpc, sender)) || (method == RpcNames.ForceToBodyPart && IsTrapped(rpc));
+        }
+
+        private bool IsTrapped(Hashtable rpc)
+        {
+            PhotonView view = rpc[PunCodes.ViewIdKey] is int viewId ? PhotonView.Find(viewId) : null;
+            return view != null && view.TryGetComponent(out Character character) && _traps.CauseOf(character) != null;
+        }
+
+        private bool IsOwnView(Hashtable rpc, PhotonPlayer sender)
+        {
+            PhotonView view = rpc[PunCodes.ViewIdKey] is int viewId ? PhotonView.Find(viewId) : null;
+            return view != null && view.OwnerActorNr == sender.ActorNumber;
         }
 
         private bool IsCached(EventData data)
@@ -112,8 +137,9 @@ namespace PeakSentinel.Protection
             return sentAt is int timestamp && unchecked(PhotonNetwork.ServerTimestamp - timestamp) > PunCodes.CachedAgeMilliseconds;
         }
 
-        private void CountRate(PhotonPlayer sender, byte code)
+        private void CountRate(PhotonPlayer sender, EventData data)
         {
+            byte code = data.Code;
             bool objectEvent = code == PunCodes.RemoveEvent || code == PunCodes.OwnershipRequestEvent || code == PunCodes.OwnershipTransferEvent || code == PunCodes.OwnershipUpdateEvent;
 
             if (!_detection.Flood.Value || (code != PunCodes.RpcEvent && code != PunCodes.SpawnEvent && !objectEvent))
@@ -130,10 +156,11 @@ namespace PeakSentinel.Protection
                 if (streak >= _flood.FloodSeconds.Value && now - reported >= FloodReportSeconds)
                 {
                     reported = now;
-                    ReportFlood(sender, rpcs, spawns, objects, streak);
+                    ReportFlood(sender, rpcs, spawns, objects, streak, MostSent(sender.ActorNumber));
                 }
 
                 (start, rpcs, spawns, objects) = (now, 0, 0, 0);
+                KindsOf(sender.ActorNumber).Clear();
             }
 
             if (code == PunCodes.SpawnEvent)
@@ -144,13 +171,32 @@ namespace PeakSentinel.Protection
                 rpcs++;
 
             _rates[sender.ActorNumber] = (start, rpcs, spawns, objects, streak, reported);
+            Dictionary<string, int> kinds = KindsOf(sender.ActorNumber);
+            string kind = code == PunCodes.SpawnEvent ? SpawnKind : objectEvent ? ObjectKind : (data.CustomData is Hashtable rpc ? RpcRouter.MethodOf(rpc) : null) ?? UnknownRpc;
+            kinds[kind] = kinds.TryGetValue(kind, out int sent) ? sent + 1 : 1;
         }
 
-        private void ReportFlood(PhotonPlayer sender, int rpcs, int spawns, int objects, int seconds)
+        private Dictionary<string, int> KindsOf(int actor)
+        {
+            if (!_kinds.TryGetValue(actor, out Dictionary<string, int> kinds))
+            {
+                kinds = new Dictionary<string, int>();
+                _kinds[actor] = kinds;
+            }
+
+            return kinds;
+        }
+
+        private string MostSent(int actor)
+        {
+            return string.Join(", ", KindsOf(actor).OrderByDescending(pair => pair.Value).Take(TopKinds).Select(pair => $"{pair.Key} x{pair.Value}"));
+        }
+
+        private void ReportFlood(PhotonPlayer sender, int rpcs, int spawns, int objects, int seconds, string mostSent)
         {
             bool mute = _detection.MuteFlooders.Value;
             _report.Tag(sender, FloodTag);
-            _report.Suspect(sender, FindingCategory.Cheats, $"floods the network for {seconds} s in a row: {rpcs} commands, {spawns} spawns and {objects} object changes in the last second", mute);
+            _report.Suspect(sender, FindingCategory.Cheats, $"floods the network for {seconds} s in a row: {rpcs} commands, {spawns} spawns and {objects} object changes in the last second (most: {mostSent})", mute);
 
             if (mute)
                 _mutes.Mute(sender, "flood");
@@ -165,8 +211,8 @@ namespace PeakSentinel.Protection
             if (view == null || view.Owner == null || view.Owner.ActorNumber == sender.ActorNumber)
                 return true;
 
-            string what = view.TryGetComponent(out Character _) ? "the character" : $"an object ({view.name})";
-            return _report.Refuse(sender, FindingCategory.Cheats, DestroyTag, $"destroyed {what} of {PlayerNames.Name(view.Owner)}", _detection.BlockObjectDestroy.Value);
+            string what = view.TryGetComponent(out Character _) ? "destroyed the character" : view.TryGetComponent(out TiedBalloon _) ? "popped a balloon" : $"destroyed an object ({view.name})";
+            return _report.Refuse(sender, FindingCategory.Cheats, DestroyTag, $"{what} of {PlayerNames.Name(view.Owner)}", _detection.BlockObjectDestroy.Value);
         }
 
         private bool CheckTakeover(PhotonPlayer sender, int[] content)

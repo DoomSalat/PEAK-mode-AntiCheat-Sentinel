@@ -10,7 +10,7 @@ namespace PeakSentinel.Ui.Pages
         private const string Header = "Other protection";
         private const float SecondToggleWidth = 300f;
         private const string DesyncLabel = "Fix players whose body goes crazy only on my side (desync after joining)";
-        private const string DesyncHint = "a player flying around and knocking you away is snapped back to where they really are, on your side; also the Resync button in Players";
+        private const string DesyncHint = "a player flying around and knocking you away is snapped back to where they really are, on your side; also the Resync button in Players (on your own row it resyncs you for everyone)";
         private const string ReclaimHostLabel = "Take the host back if another player takes it (when I am host)";
         private const string KickThiefLabel = "Kick the thief";
         private const string IgnoreKicksLabel = "Protect me: ignore vanilla kicks from other players (no ragdoll, no push)";

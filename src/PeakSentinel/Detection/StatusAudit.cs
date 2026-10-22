@@ -11,9 +11,8 @@ namespace PeakSentinel.Detection
     public sealed class StatusAudit : MonoBehaviour, IRpcAudit
     {
         private const float SyncSeconds = 2f;
-        private const float ExpectedShare = 0.5f;
-        private const float MinimumRise = 0.01f;
         private const float FrozenChange = 0.005f;
+        private const float FullBar = 2f;
         private const string Tag = "ignores poison and other statuses";
 
         private readonly List<Expectation> _pending = new List<Expectation>();
@@ -63,23 +62,25 @@ namespace PeakSentinel.Detection
             foreach (Action_InflictPoison poison in item.GetComponents<Action_InflictPoison>())
             {
                 if (poison.isActiveAndEnabled)
-                    Expect(consumer, item, CharacterAfflictions.STATUSTYPE.Poison, poison.poisonPerSecond, poison.delay + SyncSeconds);
+                    Expect(consumer, item, CharacterAfflictions.STATUSTYPE.Poison, poison.delay + SyncSeconds);
             }
 
             foreach (Action_ModifyStatus modify in item.GetComponents<Action_ModifyStatus>())
             {
                 if (modify.isActiveAndEnabled && modify.changeAmount > 0f)
-                    Expect(consumer, item, modify.statusType, modify.changeAmount, SyncSeconds);
+                    Expect(consumer, item, modify.statusType, SyncSeconds);
             }
 
             return true;
         }
 
-        private void Expect(Character consumer, Item item, CharacterAfflictions.STATUSTYPE status, float amount, float seconds)
+        private void Expect(Character consumer, Item item, CharacterAfflictions.STATUSTYPE status, float seconds)
         {
+            if (status == CharacterAfflictions.STATUSTYPE.Hot || status == CharacterAfflictions.STATUSTYPE.Cold)
+                return; // Heat and cold cancel each other and fade on their own, so a berry can leave them unchanged
+
             float before = consumer.refs.afflictions.GetCurrentStatus(status);
-            float oppositeBefore = OppositeOf(status) is CharacterAfflictions.STATUSTYPE opposite ? consumer.refs.afflictions.GetCurrentStatus(opposite) : 0f;
-            _pending.Add(new Expectation(consumer, item.GetItemName(), status, before, oppositeBefore, Mathf.Max(MinimumRise, amount * ExpectedShare), Time.time + seconds));
+            _pending.Add(new Expectation(consumer, item.GetItemName(), status, before, Time.time + seconds));
         }
 
         private void Settle(Expectation expectation)
@@ -90,10 +91,8 @@ namespace PeakSentinel.Detection
                 return;
 
             float now = consumer.refs.afflictions.GetCurrentStatus(expectation.Status);
-            float cancelled = OppositeOf(expectation.Status) is CharacterAfflictions.STATUSTYPE opposite ? expectation.OppositeBefore - consumer.refs.afflictions.GetCurrentStatus(opposite) : 0f;
-            bool frozen = Mathf.Abs(now - expectation.Before) < FrozenChange && Mathf.Abs(cancelled) < FrozenChange;
 
-            if (!frozen || now - expectation.Before + cancelled >= expectation.Rise)
+            if (Mathf.Abs(now - expectation.Before) >= FrozenChange)
                 return;
 
             PhotonView view = consumer.photonView;
@@ -114,33 +113,23 @@ namespace PeakSentinel.Detection
             if (status == CharacterAfflictions.STATUSTYPE.Hunger && !consumer.refs.afflictions.canGetHungry)
                 return true;
 
+            if (consumer.refs.afflictions.statusSum >= FullBar - FrozenChange)
+                return true;
+
             if (_ascent.StatusCause(consumer, status) != null)
                 return true;
 
             return _locator.Holds<Peak.HealingAmulet>(consumer) || consumer.refs.afflictions.HasAfflictionType(Peak.Afflictions.Affliction.AfflictionType.HealAll, out _);
         }
 
-        private CharacterAfflictions.STATUSTYPE? OppositeOf(CharacterAfflictions.STATUSTYPE status)
-        {
-            if (status == CharacterAfflictions.STATUSTYPE.Hot)
-                return CharacterAfflictions.STATUSTYPE.Cold;
-
-            if (status == CharacterAfflictions.STATUSTYPE.Cold)
-                return CharacterAfflictions.STATUSTYPE.Hot;
-
-            return null;
-        }
-
         private sealed class Expectation
         {
-            public Expectation(Character consumer, string item, CharacterAfflictions.STATUSTYPE status, float before, float oppositeBefore, float rise, float due)
+            public Expectation(Character consumer, string item, CharacterAfflictions.STATUSTYPE status, float before, float due)
             {
                 Consumer = consumer;
                 Item = item;
                 Status = status;
                 Before = before;
-                OppositeBefore = oppositeBefore;
-                Rise = rise;
                 Due = due;
             }
 
@@ -148,8 +137,6 @@ namespace PeakSentinel.Detection
             public string Item { get; }
             public CharacterAfflictions.STATUSTYPE Status { get; }
             public float Before { get; }
-            public float OppositeBefore { get; }
-            public float Rise { get; }
             public float Due { get; }
         }
     }

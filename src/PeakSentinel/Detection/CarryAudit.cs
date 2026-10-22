@@ -11,12 +11,12 @@ namespace PeakSentinel.Detection
         private const float PiggybackReach = 3f;
         private const string Tag = "carries players illegally";
 
-        private readonly SuspicionReport _report;
+        private readonly VictimGuard _guard;
         private readonly DetectionSettings _detection;
 
-        public CarryAudit(SuspicionReport report, DetectionSettings detection)
+        public CarryAudit(VictimGuard guard, DetectionSettings detection)
         {
-            _report = report;
+            _guard = guard;
             _detection = detection;
         }
 
@@ -38,7 +38,7 @@ namespace PeakSentinel.Detection
 
             string reason = ReasonAgainst(call, carrier, target);
             // Block only protects your own screen: the cheater still sees the victim on their back, while on yours the victim stays on the ground
-            return reason == null || _report.Refuse(call.Sender, FindingCategory.Cheats, Tag, $"picked up {PlayerNames.Name(targetView.Owner)} {reason}", _detection.BlockForcedActions.Value);
+            return reason == null || _guard.Refuse(call.Sender, target, FindingCategory.Cheats, Tag, $"picked up {PlayerNames.Name(targetView.Owner)} {reason}", _detection.BlockForcedActions.Value);
         }
 
         private string ReasonAgainst(RpcCall call, Character carrier, Character target)

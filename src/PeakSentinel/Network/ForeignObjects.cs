@@ -18,6 +18,11 @@ namespace PeakSentinel.Network
         {
             int viewId = target.GetComponent<PhotonView>().ViewID;
             RemoveLocal(target);
+            RemoveForEveryone(viewId, creator);
+        }
+
+        public void RemoveForEveryone(int viewId, PhotonPlayer creator)
+        {
             PhotonNetwork.NetworkingClient.OpRaiseEvent(PunCodes.RemoveEvent, new Hashtable { [PunCodes.ViewIdKey] = viewId }, new RaiseEventOptions { Receivers = ReceiverGroup.Others }, SendOptions.SendReliable);
             PhotonNetwork.NetworkingClient.OpRaiseEvent(PunCodes.SpawnEvent, new Hashtable { [PunCodes.InstantiationIdKey] = viewId }, new RaiseEventOptions { CachingOption = EventCaching.RemoveFromRoomCache, TargetActors = new[] { creator.ActorNumber } }, SendOptions.SendReliable);
         }

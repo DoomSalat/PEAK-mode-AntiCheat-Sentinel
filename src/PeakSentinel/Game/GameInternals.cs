@@ -12,6 +12,7 @@ namespace PeakSentinel.Game
         private static readonly AccessTools.FieldRef<RescueHook, bool> HookPulling = AccessTools.FieldRefAccess<RescueHook, bool>("isPulling"); // Static: cached field accessor
         private static readonly AccessTools.FieldRef<RescueHook, Character> HookTarget = AccessTools.FieldRefAccess<RescueHook, Character>("targetPlayer"); // Static: cached field accessor
         private static readonly AccessTools.FieldRef<FrogTongue, Character> TongueTarget = AccessTools.FieldRefAccess<FrogTongue, Character>("_targetCharacter"); // Static: cached field accessor
+        private static readonly AccessTools.FieldRef<VenusFlyTrap, Character> FlyTrapTarget = AccessTools.FieldRefAccess<VenusFlyTrap, Character>("_targetPlayer"); // Static: cached field accessor
         private static readonly AccessTools.FieldRef<Skelleton, Character> SkeletonOwner = AccessTools.FieldRefAccess<Skelleton, Character>("spawnedFromCharacter"); // Static: cached field accessor
         private static readonly AccessTools.FieldRef<RunManager, bool> TimerActive = AccessTools.FieldRefAccess<RunManager, bool>("timerActive"); // Static: cached field accessor
         private static readonly AccessTools.FieldRef<AdditionalCookingBehavior, ItemCooking> CookingSource = AccessTools.FieldRefAccess<AdditionalCookingBehavior, ItemCooking>("itemCooking"); // Static: cached field accessor
@@ -30,6 +31,11 @@ namespace PeakSentinel.Game
         public static Character TargetOf(FrogTongue tongue)
         {
             return TongueTarget(tongue);
+        }
+
+        public static Character TargetOf(VenusFlyTrap trap)
+        {
+            return FlyTrapTarget(trap);
         }
 
         public static Character OwnerOf(Skelleton skeleton)

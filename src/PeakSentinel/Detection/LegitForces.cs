@@ -1,3 +1,4 @@
+using PeakSentinel.Detection.Flight;
 using PeakSentinel.Game;
 using PhotonPlayer = Photon.Realtime.Player;
 
@@ -9,16 +10,20 @@ namespace PeakSentinel.Detection
 
         private readonly ItemLocator _locator;
         private readonly CookingEchoes _cooking;
+        private readonly EnvironmentMarks _traps;
+        private readonly SpawnBlame _blame;
 
-        public LegitForces(ItemLocator locator, CookingEchoes cooking)
+        public LegitForces(ItemLocator locator, CookingEchoes cooking, EnvironmentMarks traps, SpawnBlame blame)
         {
+            _blame = blame;
+            _traps = traps;
             _locator = locator;
             _cooking = cooking;
         }
 
         public bool Explains(PhotonPlayer sender, Character victim)
         {
-            return victim.refs.afflictions.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.FlyTrap) > 0f || _locator.LooseItemNear(sender, victim.Center, ThrownReach) || PullsVictim(sender, victim) || _cooking.Explains<Action_RandomMushroomEffect>(victim);
+            return victim.refs.afflictions.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.FlyTrap) > 0f || (!_blame.Blames(sender) && _locator.LooseItemNear(sender, victim.Center, ThrownReach)) || PullsVictim(sender, victim) || _cooking.Explains<Action_RandomMushroomEffect>(victim) || _traps.CauseOf(victim) != null;
         }
 
         private bool PullsVictim(PhotonPlayer sender, Character victim)

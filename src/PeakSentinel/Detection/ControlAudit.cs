@@ -21,6 +21,8 @@ namespace PeakSentinel.Detection
             { RpcNames.ShownDead, "look dead" },
             { RpcNames.ShownPassedOut, "look passed out" },
             { RpcNames.SyncStatuses, "show fake statuses" },
+            { RpcNames.SyncAfflictions, "show fake effects" },
+            { RpcNames.SyncThorns, "show fake thorns" },
             { RpcNames.ApplyStatuses, "get statuses" },
             { RpcNames.UnPassOut, "wake up" },
             { RpcNames.StopVineClimbing, "let go of the vine" },
@@ -32,12 +34,12 @@ namespace PeakSentinel.Detection
             { RpcNames.ThrowItem, "throw an item" },
         };
 
-        private readonly SuspicionReport _report;
+        private readonly VictimGuard _guard;
         private readonly DetectionSettings _detection;
 
-        public ControlAudit(SuspicionReport report, DetectionSettings detection)
+        public ControlAudit(VictimGuard guard, DetectionSettings detection)
         {
-            _report = report;
+            _guard = guard;
             _detection = detection;
         }
 
@@ -51,7 +53,7 @@ namespace PeakSentinel.Detection
             if (!_detection.ForcedActions.Value || call.Sender == null || call.Owner == null || call.FromOwner || call.FromHost || call.FromLocal)
                 return true;
 
-            return _report.Refuse(call.Sender, FindingCategory.Cheats, Tag, $"made {PlayerNames.Name(call.Owner)} {Actions[call.Method]}{StatusesOf(call)}", _detection.BlockForcedActions.Value);
+            return _guard.Refuse(call.Sender, call.Component<Character>(), FindingCategory.Cheats, Tag, $"made {PlayerNames.Name(call.Owner)} {Actions[call.Method]}{StatusesOf(call)}", _detection.BlockForcedActions.Value);
         }
 
         private string StatusesOf(RpcCall call)
@@ -59,8 +61,8 @@ namespace PeakSentinel.Detection
             if (call.Method != RpcNames.ApplyStatuses || !(call.Argument(0) is float[] amounts))
                 return string.Empty;
 
-            IEnumerable<string> statuses = amounts.Select((amount, index) => (amount, index)).Where(status => status.amount > 0f).Select(status => $"{(CharacterAfflictions.STATUSTYPE)status.index} {status.amount * 100f:F0}%");
-            return $": {string.Join(", ", statuses)}";
+            IEnumerable<string> statuses = amounts.Select((amount, index) => (amount, index)).Where(status => status.amount != 0f).Select(status => $"{(CharacterAfflictions.STATUSTYPE)status.index} {status.amount * 100f:+0;-0}%");
+            return $": {string.Join(", ", statuses)} (a host-only command, the game ignores it from anyone else)";
         }
     }
 }

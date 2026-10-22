@@ -13,17 +13,18 @@ namespace PeakSentinel.Detection
     public sealed class WorldAudit : IRpcAudit
     {
         private const string WorldTag = "breaks host-only game events";
-        private const int FlareLitKey = 3;
         private const float PeakCheckOffset = 10f;
         private const float StandingReach = 15f;
 
         private static readonly Dictionary<string, Rule[]> Rules = BuildRules(); // Static: fixed table of host-only RPCs (same as PEAKER)
 
         private readonly SuspicionReport _report;
+        private readonly VictimGuard _guard;
         private readonly DetectionSettings _detection;
 
-        public WorldAudit(SuspicionReport report, DetectionSettings detection)
+        public WorldAudit(SuspicionReport report, VictimGuard guard, DetectionSettings detection)
         {
+            _guard = guard;
             _report = report;
             _detection = detection;
         }
@@ -42,6 +43,9 @@ namespace PeakSentinel.Detection
             {
                 if (call.View.GetComponent(rule.Component) == null)
                     continue;
+
+                if (call.Method == RpcNames.TriggerBanana && !IsAllowed(rule, call))
+                    return RefuseBanana(rule, call);
 
                 return IsAllowed(rule, call) || _report.Refuse(call.Sender, FindingCategory.Cheats, WorldTag, Describe(rule, call), _detection.BlockHostOnlyEvents.Value, RepairFor(call));
             }
@@ -66,6 +70,14 @@ namespace PeakSentinel.Detection
                     PhotonView victim = call.ViewAt(0);
                     return victim == null || call.SentBy(victim.Owner);
             }
+        }
+
+        private bool RefuseBanana(Rule rule, RpcCall call)
+        {
+            PhotonView target = call.ViewAt(0);
+            Character victim = target == null ? null : target.GetComponent<Character>();
+            Recovery standUp = victim == null ? null : new Recovery("stood them back up", to => victim.photonView.RPC(RpcNames.UnFall, to), true);
+            return _guard.Refuse(call.Sender, victim, FindingCategory.Cheats, WorldTag, Describe(rule, call), _detection.BlockHostOnlyEvents.Value, standUp);
         }
 
         private string Describe(Rule rule, RpcCall call)
@@ -159,7 +171,13 @@ namespace PeakSentinel.Detection
                 return true;
 
             Flare flare = view.GetComponent<Flare>();
-            return flare != null && flare.GetData<BoolItemData>((DataEntryKey)FlareLitKey).Value && Singleton<MountainProgressHandler>.Instance.IsAtPeak(flare.transform.position + Vector3.forward * PeakCheckOffset);
+
+            if (flare == null)
+                return false;
+
+            Character holder = flare.item.holderCharacter;
+            bool lit = flare.GetData<BoolItemData>(DataEntryKey.FlareActive).Value;
+            return (lit || holder != null) && Singleton<MountainProgressHandler>.Instance.IsAtPeak(holder != null ? holder.Center : flare.transform.position + Vector3.forward * PeakCheckOffset);
         }
 
         private static Dictionary<string, Rule[]> BuildRules() // Static: builds the fixed rule table once

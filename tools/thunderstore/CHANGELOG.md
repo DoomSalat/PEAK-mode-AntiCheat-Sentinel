@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.1.1
+
+- Being shot from a scout cannon is no longer reported as flying or moving too fast.
+- Jetpack and rocket pack flights are no longer reported as flying or moving too fast.
+- Flood check: wind on the Alpine biome makes every player send a force command about 50 times a second (even with no wind); these no longer count as a flood. Flood findings now list the commands sent most.
+- New check: a player who knocks someone else down with no kick and nothing thrown (cheat ragdoll, for example 20 s again and again) is blocked; the host stands the victim back up for everyone. Waterfalls that knock players down count as fair.
+- Venus fly trap: the game makes every player pull the trapped one, so these pulls (and the burst right after the victim gets free) are no longer reported as pushes or as a flood. Spiders and cacti were checked: only the trapped player sends their pull, nothing to fix there.
+- Stamina check: hanging still on a vine or chain, resting on a gentle wall and climbing with little stamina left all spend stamina very slowly, which was read as "stamina does not go down". Any steady drop now counts; ladders and other cheap climbing surfaces and nearly empty stamina (10 % or less) are not checked.
+- Status lock check no longer looks at heat and cold (they cancel each other and fade on their own, so a flame berry can leave heat where it was) or at a player whose status bar is already full.
+- Crash protection: broken thorn, status, effect and inventory data is checked before the game reads it and is always blocked (a cheater was crashing lobbies with broken thorn data). Another player sending your effects or thorns is reported like fake statuses.
+- Flood check now counts status, effect and thorn updates when they are sent for someone else's character.
+- Banned players are muted at once, on the host and on clients: the game's kick only asks the player to leave and a cheater can ignore it, but muting drops everything they send on your side.
+- The trace of the previous game is kept as `PeakSentinel-prev.log`, so it survives a crash and a restart.
+- Spawned-item attacks: after a player spawns an item out of nowhere, their items no longer excuse pushes and knock-downs for 20 s, and even short knock-downs from them are blocked (the host stands the victim back up). A cheater dropping spawned coconuts on players was knocking them down this way. Both halves of such a coconut are now removed too (one half used to pass as a piece of a broken item).
+- Kick protection is on by default for new installs (IgnoreKicks and ShieldEveryoneFromKicks): kicks are ignored while the run has kicks off, and the host stands kicked players back up. Honest kicks in a run with kicks on still work.
+- Players running PeakConsole (an admin console mod) are spotted on join and logged as a suspicion, never kicked: honest hosts use it too, but it can teleport and spawn items.
+- "Made X get statuses" now lists healing too (negative values) and says it is a host-only command that the game ignores from other players.
+- Cheat kills: the victim's own game still kills them, so blocking the kill only on your side left them a ghost that the host saw as alive, and statues could not revive them. Now the host revives the victim for everyone right away, and a client only reports the kill (with a revive button) instead of blocking it. A kill aimed at you is still blocked.
+- Cheat teleports of other players: like kills, blocking only on your side did not help (the victim's own game moves them). The host now sends the victim back for everyone; a client only reports it.
+- The "play dead" and backflip emotes no longer make everyone else look like they knocked the player down (the game sends that fall from every player).
+- Self-zombify: a player who turns themselves into a zombie without spores (the console Zombify command or a cheat) is reported and blocked; as host the zombie is not spawned.
+- Ignored kicks and blocked knock-downs on you now also stand you back up on everyone else's screen: the fall reached them too, and the game does not sync falls, so they kept seeing you lying down.
+- Rescue helicopter: lighting the flare at the peak is no longer blocked. The game sends the helicopter call from every player who sees the flare holder at the peak, and Sentinel checked a point 10 m in front of the flare instead of the holder.
+- A blocked cheat kill on you now also brings you back on everyone else's screen (the kill reached them too); other Sentinel users accept that revive.
+- Endless uses: shots of items with limited uses are counted per item. Firing a blowgun dart or an AntiZooka antigravity shot more times than the item allows is reported and blocked (as host, the extra antigravity field is removed for everyone).
+- A player who changes their name mid-game is reported again (the Steam name check hid it when the new name was the Steam name).
+- No more "NoHunger with no source" for a player who just joined late at a campfire (their body is still out of sync on your side for a few seconds).
+- Blowgun spam: extra darts that hit another player are now undone by the host. For 20 s after the last blocked dart, whatever the victim's statuses gained (drowsiness and the like, which eats the stamina bar) is taken back. A client only reports these darts, since the victim's own game applies them.
+- New Resync button on your own row in Players: if others keep seeing you knocked down, passed out or with wrong statuses, it stands you up and wakes you up on their screens and sends your statuses, effects and petrification again.
+- The log now tells what really happened to a victim. "blocked" means the attack never reached them (it was aimed at you). The new "recovered" (blue shield too) means the host undid it for everyone: revived, woken up, stood up, sent back. If you are a client and someone else is attacked in a way only the host can undo, it is reported without "blocked", because their own game still applies it.
+- Fake banana slips (a player making someone else slip with no peel under them): the host now stands the victim back up for everyone, and a fake slip on you is undone on everyone else's screen too. A client only reports a slip aimed at another player, since the victim's own game makes them slip.
+- Admin_menukz (cheat menu by KystoStudio): its bots carry its own mark, so a player spawning them is named as an Admin_menukz user. Its invisibility (the body position sent as 9999 m below the map) is reported and undone: the game also sends where the player stands or climbs, so Sentinel shows them there.
+- Cheat bots: a player who spawns extra copies of their own character (bots that look like them) is reported and always blocked; the host removes the copies for everyone. Mushroom zombies made from a player (the CubeX "become zombie" cheat) are now host-only spawns like the Scoutmaster.
+- Balloons: tying a balloon onto another player, tying balloons to yourself without holding one, or tying more than a bunch gives is reported, and the host removes that balloon for everyone. Popping someone else's balloon is reported as "popped a balloon" and blocked.
+
 ## 1.1.0
 
 - Work in progress: True Final Ascent support and the Speedrun tab are new and still being tested. Please send logs if something looks wrong.

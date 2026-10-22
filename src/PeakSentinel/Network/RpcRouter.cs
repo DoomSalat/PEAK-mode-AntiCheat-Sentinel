@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using ExitGames.Client.Photon;
 using PeakSentinel.Reporting;
@@ -8,6 +9,7 @@ namespace PeakSentinel.Network
 {
     public sealed class RpcRouter
     {
+        private const string AuditErrorLevel = "AUDIT ERROR";
 
         private readonly List<IRpcAudit> _audits;
         private readonly DebugTrace _trace;
@@ -38,7 +40,6 @@ namespace PeakSentinel.Network
             if (method == null)
                 return true;
 
-            _ledger.Note(sender, rpc);
             RpcCall call = new RpcCall(method, sender, PhotonView.Find(viewId), rpc[PunCodes.ArgumentsKey] as object[]);
 
             if (_trace.TracesAllRpcs || _audits.Exists(audit => audit.Watches(method)))
@@ -49,10 +50,26 @@ namespace PeakSentinel.Network
             foreach (IRpcAudit audit in _audits)
             {
                 if (audit.Watches(method))
-                    allowed &= audit.Inspect(call);
+                    allowed &= InspectSafely(audit, call);
             }
 
+            if (allowed)
+                _ledger.Note(sender, rpc);
+
             return allowed;
+        }
+
+        private bool InspectSafely(IRpcAudit audit, RpcCall call)
+        {
+            try
+            {
+                return audit.Inspect(call);
+            }
+            catch (Exception exception)
+            {
+                _trace.Finding(AuditErrorLevel, call.Sender, $"{audit.GetType().Name} failed on {call.Method} ({exception.GetType().Name}), the call was dropped");
+                return false;
+            }
         }
     }
 }

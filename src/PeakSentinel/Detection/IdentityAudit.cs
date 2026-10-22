@@ -15,6 +15,9 @@ namespace PeakSentinel.Detection
         private const string UserIdProperty = "UserID";
         private const string UnknownPersona = "[unknown]";
         private const string SpoofTag = "spoofs a name or Steam ID";
+        private const string RenameKey = "rename:";
+        private const string SteamNameKey = "steam name:";
+        private const string SteamIdKey = "steam id:";
 
         private readonly Dictionary<int, string> _firstNames = new Dictionary<int, string>();
         private readonly HashSet<(int Actor, string Kind)> _reported = new HashSet<(int Actor, string Kind)>();
@@ -69,7 +72,7 @@ namespace PeakSentinel.Detection
                 return;
             }
 
-            if (first != player.NickName && _reported.Add((player.ActorNumber, player.NickName)))
+            if (first != player.NickName && _reported.Add((player.ActorNumber, RenameKey + player.NickName)))
                 _report.Refuse(player, FindingCategory.Cheats, SpoofTag, $"changed their name mid-game from '{first}' to '{player.NickName}'", false);
         }
 
@@ -85,7 +88,7 @@ namespace PeakSentinel.Detection
 
             string persona = SteamFriends.GetFriendPersonaName(steamId);
 
-            if (string.IsNullOrEmpty(persona) || persona == UnknownPersona || string.Equals(persona, player.NickName, StringComparison.OrdinalIgnoreCase) || !_reported.Add((player.ActorNumber, persona)))
+            if (string.IsNullOrEmpty(persona) || persona == UnknownPersona || string.Equals(persona, player.NickName, StringComparison.OrdinalIgnoreCase) || !_reported.Add((player.ActorNumber, SteamNameKey + persona)))
                 return;
 
             _report.Tag(player, SpoofTag);
@@ -101,7 +104,7 @@ namespace PeakSentinel.Detection
 
             string local = SteamAPI.IsSteamRunning() ? SteamUser.GetSteamID().m_SteamID.ToString() : null;
 
-            if (id == local && _reported.Add((player.ActorNumber, id)))
+            if (id == local && _reported.Add((player.ActorNumber, SteamIdKey + id)))
             {
                 _report.Refuse(player, FindingCategory.Cheats, SpoofTag, "uses your Steam ID (impersonation)", false);
                 return;
@@ -109,7 +112,7 @@ namespace PeakSentinel.Detection
 
             foreach (PhotonPlayer other in PhotonNetwork.PlayerList)
             {
-                if (other.ActorNumber != player.ActorNumber && !other.IsLocal && other.CustomProperties[UserIdProperty] as string == id && _reported.Add((player.ActorNumber, id)))
+                if (other.ActorNumber != player.ActorNumber && !other.IsLocal && other.CustomProperties[UserIdProperty] as string == id && _reported.Add((player.ActorNumber, SteamIdKey + id)))
                     _report.Refuse(player, FindingCategory.Cheats, SpoofTag, $"uses the same Steam ID as {PlayerNames.Name(other)} (impersonation)", false);
             }
         }

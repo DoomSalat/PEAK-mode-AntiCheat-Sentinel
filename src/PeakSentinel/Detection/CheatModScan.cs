@@ -20,6 +20,11 @@ namespace PeakSentinel.Detection
             ("pmx_ver", "PEAK-MX cheat user"),
         };
 
+        private static readonly (string Key, string Tag)[] ConsoleMarkers = // Static: fixed property markers of admin console mods, which honest hosts use too
+        {
+            ("AdvancedConsoleUser", "PeakConsole user"),
+        };
+
         private readonly HashSet<(int Actor, string Key)> _reported = new HashSet<(int Actor, string Key)>();
         private SuspicionReport _report;
         private DetectionSettings _detection;
@@ -71,6 +76,15 @@ namespace PeakSentinel.Detection
                     PlayerHandler.Kick(player.ActorNumber);
                     return;
                 }
+            }
+
+            foreach ((string key, string tag) in ConsoleMarkers)
+            {
+                if (!player.CustomProperties.ContainsKey(key) || !_reported.Add((player.ActorNumber, key)))
+                    continue;
+
+                _report.Tag(player, tag);
+                _report.Suspect(player, FindingCategory.Cheats, $"is a {tag}: an admin console that can teleport them, spawn items and give them god mode; fine on an honest host");
             }
         }
     }

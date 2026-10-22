@@ -16,10 +16,12 @@ namespace PeakSentinel.Patches
         public static RpcRouter Router { get; set; } // Set: assigned once by SentinelPlugin
         public static PacketGate Gate { get; set; } // Set: assigned once by SentinelPlugin, sees every incoming Photon event first
         public static InstantiateAudit Instantiate { get; set; } // Set: assigned once by SentinelPlugin
+        public static InvisibilityAudit Invisibility { get; set; } // Set: assigned once by SentinelPlugin, fixes incoming body positions
         public static HandGuard Hands { get; set; } // Set: assigned once by SentinelPlugin, told about own outgoing pickup requests
         public static CookingEchoes Cooking { get; set; } // Set: assigned once by SentinelPlugin, filled by the cooking patch
         public static LootLedger Loot { get; set; } // Set: assigned once by SentinelPlugin, filled by the loot roll patch
         public static EnvironmentMarks Environment { get; set; } // Set: assigned once by SentinelPlugin, filled by the environment patches
+        public static EnvironmentMarks Traps { get; set; } // Set: assigned once by SentinelPlugin, filled by the trap patches
         public static SentinelWindow Window { get; set; } // Set: assigned once by SentinelPlugin, frees the cursor while open
     }
 }

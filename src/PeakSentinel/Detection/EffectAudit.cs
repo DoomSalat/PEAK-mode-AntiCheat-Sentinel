@@ -24,6 +24,8 @@ namespace PeakSentinel.Detection
         private const float GivenItemSeconds = 60f;
         private const float ItemReach = 4f;
         private const float LateJoinSeconds = 60f;
+        private const float JoinSyncSeconds = 30f;
+        private const string JoinSource = "just joined, body still syncing on your side";
 
         private static readonly HashSet<Affliction.AfflictionType> Watched = new HashSet<Affliction.AfflictionType> // Static: fixed effects that cheats fake for godmode or endless stamina
         {
@@ -130,6 +132,12 @@ namespace PeakSentinel.Detection
                 if (resting != null && NearLitCampfire(resting))
                 {
                     Settle(call.Sender, effect, CampfireSource);
+                    return;
+                }
+
+                if (resting != null && _spawns.SpawnedWithin(resting, JoinSyncSeconds))
+                {
+                    Settle(call.Sender, effect, JoinSource);
                     return;
                 }
             }

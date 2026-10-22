@@ -11,26 +11,35 @@ namespace PeakSentinel.Detection.Stamina
     {
         private const float SampleSeconds = 0.25f;
         private const float TraceSeconds = 0.5f;
+        private const float HangingDrain = 0.001f;
+        private const float SurfaceReach = 1f;
+        private const int SurfaceBuffer = 8;
+        private const float LightSurface = 0.34f;
+        private const float NearlyEmpty = 0.1f;
         private const string Tag = "infinite stamina";
         private const string Sprint = "sprinting";
         private const string Climb = "climbing";
         private const string Dead = "dead or passed out";
         private const string Airport = "airport";
         private const string StaminaItem = "stamina item effect";
-        private const string Empty = "stamina empty";
+        private const string Empty = "stamina nearly empty";
+        private const string Ladder = "ladder or light climbing surface";
 
         private readonly Dictionary<int, StaminaTrack> _tracks = new Dictionary<int, StaminaTrack>();
+        private readonly Collider[] _surfaces = new Collider[SurfaceBuffer];
         private SuspicionReport _report;
         private DebugTrace _trace;
         private DetectionSettings _detection;
         private StaminaSettings _settings;
         private TrueAscentState _ascent;
+        private int _surfaceMask;
         private float _nextSample;
 
         public bool CheckLocal { get; set; } // Set: SpeedrunMonitor turns the check of the local player on for speedruns
 
         public void Initialize(SuspicionReport report, DebugTrace trace, DetectionSettings detection, StaminaSettings settings, TrueAscentState ascent)
         {
+            _surfaceMask = HelperFunctions.GetMask(HelperFunctions.LayerType.AllPhysicalExceptCharacter);
             _ascent = ascent;
             _report = report;
             _trace = trace;
@@ -71,7 +80,7 @@ namespace PeakSentinel.Detection.Stamina
             bool ate = character.data.extraStamina > track.Bonus + _settings.MinDrop.Value;
             track.Bonus = character.data.extraStamina;
 
-            if (!track.Lowest.HasValue || ate || stamina < track.Lowest.Value - _settings.MinDrop.Value)
+            if (!track.Lowest.HasValue || ate || stamina < track.Lowest.Value - HangingDrain)
             {
                 track.Lowest = stamina;
                 track.UnspentFor = 0f;
@@ -121,7 +130,23 @@ namespace PeakSentinel.Detection.Stamina
             if (ascent != null)
                 return ascent;
 
-            return stamina <= _settings.MinDrop.Value ? Empty : null;
+            if (character.data.isClimbing && OnLightSurface(character.data.climbPos))
+                return Ladder;
+
+            return stamina <= NearlyEmpty ? Empty : null;
+        }
+
+        private bool OnLightSurface(Vector3 climbPos)
+        {
+            int count = Physics.OverlapSphereNonAlloc(climbPos, SurfaceReach, _surfaces, _surfaceMask);
+
+            for (int i = 0; i < count; i++)
+            {
+                if (_surfaces[i].TryGetComponent(out ClimbModifierSurface surface) && surface.staminaUsageMultiplier <= LightSurface)
+                    return true;
+            }
+
+            return false;
         }
 
         private StaminaTrack TrackOf(int actor)

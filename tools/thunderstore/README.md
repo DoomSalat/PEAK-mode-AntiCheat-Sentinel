@@ -11,12 +11,17 @@ Peak Sentinel watches the network. Every command in PEAK carries the name of the
 | **Item spawns** | Cheat spawns, forged pickups and swapped inventories are refused; items spawned on the ground are removed for everyone | **everyone**, while you are the host |
 | **Items a cheater gave themselves** | The host refuses the inventory, sends them back their real one and removes the item from their hands for everyone | **everyone**, while you are the host |
 | **Items forced into your hands** | The item is removed from your inventory | you |
-| **Kills, knock-outs, teleports, flings, cheat pushes and blasts** | The attacker is logged; with Block the command does nothing on your side | you (others need their own Sentinel) |
+| **Kills, knock-outs, knock-downs, teleports, fake banana slips, petrification and rocket blasts** | Aimed at you: blocked. Aimed at someone else: the host undoes it for everyone right away (revives, wakes up, stands up, sends back) and the log says "recovered" | you, or **everyone** while you are the host |
+| **Flings and cheat pushes** | The attacker is logged; with Block the command does nothing on your side, and a Fix button sends the victim back | you (others need their own Sentinel) |
+| **Endless item uses** (blowgun and AntiZooka spam) | Extra shots are blocked; the host removes extra antigravity fields and takes back what extra darts did to a victim | you, or **everyone** while you are the host |
+| **Balloons** tied onto other players or out of nowhere, popping someone else's balloons | Logged; the host removes the balloon for everyone | you, or **everyone** while you are the host |
 | **Revives with no source** (self-revive cheats) | The reviver is logged; with Block the revive does not happen on your side | you |
 | **Host-only events** (end game, helicopter, fog, bridges, time of day, ascent, lava, run settings...) | The sender is logged; with Block the event does not happen on your side | you |
-| **Bees, tornados, zombies, Scoutmaster, Bing Bong** from a non-host | Not created on your side; the host removes them for everyone | you, or **everyone** while you are the host |
+| **Bees, tornados, zombies, Scoutmaster, Bing Bong, cheat bots** (copies of a player) from a non-host | Not created on your side; the host removes them for everyone | you, or **everyone** while you are the host |
 | **Someone takes the host** | You take it back at once, the thief can be kicked | **everyone**, while you are the host |
 | **Cherry, Atlas and PEAK-MX cheat users** | Logged, and kicked if you want | **everyone**, while you are the host |
+| **PeakConsole users** (admin console) | Logged as a suspicion only, honest hosts use it too | you |
+| **Admin_menukz users** (spotted by the mark on their bots) and **invisibility** (position sent from under the map) | Logged; an invisible player is shown where they really stand | you |
 | **Flying, speed hacks** | Logged; the host can snap the flyer back to the ground | **everyone**, while you are the host (it is a guess) |
 | **Infinite stamina, godmode effects without a source, status lock** (poison eaten but no poison) | Logged | log only (it is a guess) |
 | **Warps to infinity** (black-screen cheat) | Always refused | you |
@@ -25,9 +30,11 @@ Peak Sentinel watches the network. Every command in PEAK carries the name of the
 | **Destroying other players' objects**, building with their items, flag spam | Logged; with Block it does not happen on your side | you |
 | **Name and Steam ID spoofing**, renaming mid-game | Logged | log only |
 | **Network floods** (lag and crash cheats) | Logged; optionally the flooder is muted for you | you |
+| **Broken status, effect, thorn and inventory data** (lobby crash cheat) | Always refused before the game reads it | you |
 | **Taking over another player's character** | Logged and ignored | you |
 | **A player flying around the map and knocking you away** (PEAK desync bug after joining, only on your screen) | Their body is snapped back to where they really are, automatically or with the Resync button; Resync also re-applies their latest state (statuses, effects, item in hand) | you |
-| **Vanilla kicks** | Optional: ignore them, or stand kicked players back up | you, or everyone |
+| **Others keep seeing you knocked down or passed out** | The Resync button on your own row stands you up and wakes you up on their screens and sends your statuses again | **everyone** |
+| **Vanilla kicks** | On by default: kicks while the run has kicks off are ignored, and as host you stand kicked players back up | you, and everyone while you are the host |
 | **Kick and Ban** | Ban is permanent: a banned player is kicked from every lobby you host | **everyone**, while you are the host |
 
 Every setting in the window tells you in plain words what happens if you turn it on and who it protects right now.
@@ -48,7 +55,7 @@ In the **Esc menu** a player gets an orange **?** if they behaved strangely and 
 
 ## The honest limits
 
-- Each client decides for itself what to run. If a cheater kills a player who has no Sentinel, that player dies — the host can't stop a command that goes straight to the victim. **The more of your friends install Sentinel, the less a cheater can do.**
+- Each client decides for itself what to run. If a cheater kills a player who has no Sentinel, that player dies — the host can't stop a command that goes straight to the victim, but a host with Sentinel revives them right after. **The more of your friends install Sentinel, the less a cheater can do.**
 - Flying, speed and stamina checks are guesses: they can be wrong, and they say so in the log.
 - A cheating host can't be caught.
 - On a client, items spawned through the host look as if the host made them (marked "may be not the host"): only the host sees who really asked.
@@ -81,7 +88,7 @@ Your logs help a lot, especially in these two cases:
 What to attach:
 
 1. **The report**: in the F6 window press **Log → Export**. The file appears in `BepInEx/` as `PeakSentinel-report-<date>.txt`.
-2. **The trace**, if you can: turn on `[Debug] TraceFile` in `BepInEx/config/peaksentinel.cfg` (and `TraceAllRpcs` for the most detail), play until it happens again, then attach `BepInEx/PeakSentinel.log`. Zip it if it is bigger than 25 MB.
+2. **The trace**, if you can: turn on `[Debug] TraceFile` in `BepInEx/config/peaksentinel.cfg` (and `TraceAllRpcs` for the most detail), play until it happens again, then attach `BepInEx/PeakSentinel.log`. If the game crashed or you already restarted it, the trace of the previous game is in `BepInEx/PeakSentinel-prev.log`. Zip it if it is bigger than 25 MB.
 3. A few words: what happened, who did it and roughly when.
 
 The files contain the nicknames of the players in your lobby.

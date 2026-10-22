@@ -16,16 +16,18 @@ namespace PeakSentinel.Detection
         private const float SkeletonReach = 3f;
         private const string Tag = "revives without a source";
 
-        private readonly SuspicionReport _report;
+        private readonly VictimGuard _guard;
         private readonly DetectionSettings _detection;
         private readonly SpawnClock _spawns;
         private readonly TrueAscentState _ascent;
+        private readonly CheatKills _kills;
 
-        public ReviveAudit(SuspicionReport report, DetectionSettings detection, SpawnClock spawns, TrueAscentState ascent)
+        public ReviveAudit(VictimGuard guard, DetectionSettings detection, SpawnClock spawns, TrueAscentState ascent, CheatKills kills)
         {
+            _guard = guard;
+            _kills = kills;
             _ascent = ascent;
             _spawns = spawns;
-            _report = report;
             _detection = detection;
         }
 
@@ -45,7 +47,7 @@ namespace PeakSentinel.Detection
                 return true;
 
             string action = call.FromOwner ? "revived themselves with no source" : $"revived {PlayerNames.Name(call.Owner)} with no source (no statue, effigy, Book of Bones or skeleton)";
-            return _report.Refuse(call.Sender, FindingCategory.Cheats, Tag, action, _detection.BlockHostOnlyEvents.Value);
+            return _guard.Refuse(call.Sender, target, FindingCategory.Cheats, Tag, action, _detection.BlockHostOnlyEvents.Value);
         }
 
         private bool HasSource(RpcCall call, Character target)
@@ -54,7 +56,7 @@ namespace PeakSentinel.Detection
                 return true;
 
             if (call.FromOwner)
-                return _spawns.SpawnedWithin(target, FreshSpawnSeconds) || _ascent.LandingCause(target) != null;
+                return _spawns.SpawnedWithin(target, FreshSpawnSeconds) || _kills.Undoes(target) || _ascent.LandingCause(target) != null;
 
             Character reviver = PlayerHandler.GetPlayerCharacter(call.Sender);
             Item item = reviver == null ? null : reviver.data.currentItem;

@@ -37,7 +37,7 @@ namespace PeakSentinel.Patches
         [HarmonyPatch(typeof(PhotonNetwork), nameof(PhotonNetwork.NetworkInstantiate), new[] { typeof(Hashtable), typeof(PhotonPlayer) })]
         public static bool FilterIncomingInstantiate(Hashtable networkEvent, PhotonPlayer creator, ref GameObject __result)
         {
-            if (SentinelHooks.Instantiate == null || networkEvent == null || SentinelHooks.Instantiate.AllowCreate(creator, networkEvent[PunCodes.PrefabNameKey] as string))
+            if (SentinelHooks.Instantiate == null || networkEvent == null || SentinelHooks.Instantiate.AllowCreate(creator, networkEvent[PunCodes.PrefabNameKey] as string, networkEvent[PunCodes.SpawnTimestampKey] is int sentAt ? sentAt : PhotonNetwork.ServerTimestamp, networkEvent[PunCodes.InstantiationIdKey] is int viewId ? viewId : 0, networkEvent[PunCodes.SpawnDataKey] as object[]))
                 return true;
 
             __result = null;
@@ -49,6 +49,13 @@ namespace PeakSentinel.Patches
         public static void InspectInstantiate(PunInstantiateParameters parameters, bool instantiateEvent, GameObject __result)
         {
             SentinelHooks.Instantiate?.Inspect(parameters.creator, __result, instantiateEvent, parameters.timestamp);
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(CharacterSyncer), nameof(CharacterSyncer.OnDataReceived))]
+        public static void RevealHidden(CharacterSyncer __instance, ref CharacterSyncData data)
+        {
+            SentinelHooks.Invisibility?.Reveal(__instance.m_character, ref data);
         }
 
         [HarmonyPostfix]

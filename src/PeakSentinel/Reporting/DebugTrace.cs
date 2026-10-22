@@ -14,6 +14,8 @@ namespace PeakSentinel.Reporting
         private const string ThroughHostNote = " (may be not the host: on a client, items spawned through the host carry the host's name)";
         private const string Separator = ", ";
         private const string Null = "null";
+        private const string PreviousSuffix = "-prev";
+        private const long MinimumKeptBytes = 1024;
 
         private readonly ConfigEntry<bool> _enabled;
         private readonly ConfigEntry<bool> _allRpcs;
@@ -23,6 +25,7 @@ namespace PeakSentinel.Reporting
         {
             _enabled = enabled;
             _allRpcs = allRpcs;
+            KeepPrevious(path);
             _writer = new StreamWriter(path, false, Encoding.UTF8) { AutoFlush = true };
             Path = path;
             Write($"trace started, game time {Time.unscaledTime:F1}");
@@ -98,6 +101,17 @@ namespace PeakSentinel.Reporting
             }
 
             return text.ToString();
+        }
+
+        private void KeepPrevious(string path)
+        {
+            FileInfo current = new FileInfo(path);
+
+            if (!current.Exists || current.Length < MinimumKeptBytes)
+                return;
+
+            string previous = System.IO.Path.Combine(current.DirectoryName, System.IO.Path.GetFileNameWithoutExtension(path) + PreviousSuffix + current.Extension);
+            File.Copy(path, previous, true);
         }
     }
 }

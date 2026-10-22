@@ -22,6 +22,7 @@ namespace PeakSentinel.Detection
         private const float WarpItemReach = 6f;
         private const float EatReach = 6f;
         private const float HungerMargin = 0.05f;
+        private const float ZombieSpores = 0.4f;
         private const string SelfTeleportTag = "teleports themselves";
 
         private static readonly HashSet<string> Methods = new HashSet<string> // Static: fixed set of RPC names that can harm another player
@@ -33,11 +34,15 @@ namespace PeakSentinel.Detection
         private readonly LegitForces _forces;
         private readonly CookingEchoes _cooking;
         private readonly TrueAscentState _ascent;
+        private readonly CheatKills _kills;
         private readonly SuspicionReport _report;
+        private readonly VictimGuard _guard;
         private readonly DetectionSettings _detection;
 
-        public HarmAudit(SuspicionReport report, DetectionSettings detection, ItemLocator locator, LegitForces forces, CookingEchoes cooking, TrueAscentState ascent)
+        public HarmAudit(SuspicionReport report, VictimGuard guard, DetectionSettings detection, ItemLocator locator, LegitForces forces, CookingEchoes cooking, TrueAscentState ascent, CheatKills kills)
         {
+            _guard = guard;
+            _kills = kills;
             _ascent = ascent;
             _forces = forces;
             _cooking = cooking;
@@ -54,10 +59,13 @@ namespace PeakSentinel.Detection
         public bool Inspect(RpcCall call)
         {
             if (call.Method == RpcNames.Warp && call.Sender != null && !call.FromLocal && call.Argument(0) is Vector3 target && !IsSane(target))
-                return _report.Refuse(call.Sender, FindingCategory.Cheats, InfinityTag, $"warped {PlayerNames.Name(call.Owner)} to an invalid position {target} (black screen), always blocked", true);
+                return _guard.Refuse(call.Sender, call.Component<Character>(), FindingCategory.Cheats, InfinityTag, $"warped {PlayerNames.Name(call.Owner)} to an invalid position {target} (black screen), always blocked", true, PhotonNetwork.IsMasterClient ? Return(call.Component<Character>(), PlayerNames.Name(call.Owner)) : null); // A client still drops it: an invalid position breaks physics on every screen
 
             if (call.Method == RpcNames.Warp && _detection.HarmToOthers.Value && call.FromOwner && !call.FromHost && !call.FromLocal && call.Argument(0) is Vector3 destination)
                 return CheckSelfWarp(call, destination);
+
+            if (call.Method == RpcNames.Zombify && _detection.HarmToOthers.Value && call.FromOwner && !call.FromHost && !call.FromLocal)
+                return CheckSelfZombify(call);
 
             if (!_detection.HarmToOthers.Value || call.Sender == null || call.Owner == null || call.FromOwner || call.FromHost || call.FromLocal)
                 return true;
@@ -77,31 +85,31 @@ namespace PeakSentinel.Detection
                         return true;
                     }
 
-                    return Refuse(call, KillsTag, $"killed {victim}", Revive(character, victim));
+                    return RefuseKill(call, character, victim);
 
                 case RpcNames.SetDead:
-                    return Refuse(call, KillsTag, $"killed {victim}", Revive(character, victim));
+                    return RefuseKill(call, character, victim);
 
                 case RpcNames.PassOut:
-                    return Refuse(call, KnocksOutTag, $"knocked out {victim}", WakeUp(character, victim));
+                    return Refuse(call, character, KnocksOutTag, $"knocked out {victim}", WakeUp(character, victim));
 
                 case RpcNames.Zombify:
-                    return Refuse(call, CursesTag, $"zombified {victim}", null);
+                    return Refuse(call, character, CursesTag, $"zombified {victim}", null);
 
                 case RpcNames.Petrify:
-                    return Refuse(call, CursesTag, $"petrified {victim}", null);
+                    return Refuse(call, character, CursesTag, $"petrified {victim}", null);
 
                 case RpcNames.SyncPetrify:
-                    return Refuse(call, CursesTag, $"set the petrification of {victim} to {call.Argument(0)}%", Unpetrify(character, victim));
+                    return Refuse(call, character, CursesTag, $"set the petrification of {victim} to {call.Argument(0)}%", Unpetrify(character, victim));
 
                 case RpcNames.Warp:
                     if (_cooking.Explains<Action_WarpToRandomPlayer>(character))
                         return true;
 
-                    return Refuse(call, TeleportsTag, $"teleported {victim} to {call.Argument(0)}", Return(character, victim));
+                    return Refuse(call, character, TeleportsTag, $"teleported {victim} to {call.Argument(0)}", Return(character, victim));
 
                 case RpcNames.RocketExplode:
-                    return Refuse(call, FlingsTag, $"set off an explosion on {victim}", Return(character, victim));
+                    return Refuse(call, character, FlingsTag, $"set off an explosion on {victim}", Return(character, victim));
 
                 case RpcNames.ForceAtPosition:
                     return CheckFling(call, victim, call.MagnitudeAt(0), character);
@@ -136,7 +144,7 @@ namespace PeakSentinel.Detection
                 action += ", sent back for everyone";
             }
 
-            return _report.Refuse(call.Sender, FindingCategory.Cheats, SelfTeleportTag, action, block, Return(self, PlayerNames.Name(call.Sender)));
+            return _report.Refuse(call.Sender, FindingCategory.Cheats, SelfTeleportTag, action, block, Return(self, PlayerNames.Name(call.Sender))?.AsRepair());
         }
 
         private bool IsDeathEcho(Character victim)
@@ -146,6 +154,16 @@ namespace PeakSentinel.Detection
 
             Item held = victim.data.currentItem;
             return victim.data.dead || (held != null && held.TryGetComponent(out Action_Die _)) || _cooking.Explains<Action_Die>(victim);
+        }
+
+        private bool CheckSelfZombify(RpcCall call)
+        {
+            Character self = call.Component<Character>();
+
+            if (self == null || self.data.zombified || (Ascents.shouldSpawnZombie && self.refs.afflictions.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.Spores) >= ZombieSpores))
+                return true;
+
+            return _report.Refuse(call.Sender, FindingCategory.Cheats, CursesTag, "turned themselves into a zombie with no spores (console command or cheat)", _detection.BlockHarmToOthers.Value);
         }
 
         private bool IsCannibalism(RpcCall call, Character victim)
@@ -177,44 +195,50 @@ namespace PeakSentinel.Detection
 
         private bool CheckFling(RpcCall call, string victim, float force, Character character)
         {
-            return force < FlingForce || (character != null && _forces.Explains(call.Sender, character)) || Refuse(call, FlingsTag, $"flung {victim} with force {force:F0}", Return(character, victim));
+            return force < FlingForce || (character != null && _forces.Explains(call.Sender, character)) || _guard.Refuse(call.Sender, character, FindingCategory.Cheats, FlingsTag, $"flung {victim} with force {force:F0}", _detection.BlockHarmToOthers.Value, null, Return(character, victim)?.AsRepair());
         }
 
-        private bool Refuse(RpcCall call, string tag, string action, Repair repair)
+        private bool Refuse(RpcCall call, Character character, string tag, string action, Recovery recovery)
         {
-            return _report.Refuse(call.Sender, FindingCategory.Cheats, tag, action, _detection.BlockHarmToOthers.Value, repair);
+            return _guard.Refuse(call.Sender, character, FindingCategory.Cheats, tag, action, _detection.BlockHarmToOthers.Value, recovery);
         }
 
-        private Repair Revive(Character character, string victim)
+        private bool RefuseKill(RpcCall call, Character character, string victim)
+        {
+            _kills.Note(character);
+            return Refuse(call, character, KillsTag, $"killed {victim}", Revive(character, victim));
+        }
+
+        private Recovery Revive(Character character, string victim)
         {
             if (character == null)
                 return null;
 
             Vector3 place = character.Center;
-            return new Repair($"revived {victim} where they died", () => character.photonView.RPC(RpcNames.ReviveAtPosition, RpcTarget.All, place, false, -1));
+            return new Recovery($"revived {victim} where they stood", target => character.photonView.RPC(RpcNames.ReviveAtPosition, target, place, false, -1), true);
         }
 
-        private Repair Unpetrify(Character character, string victim)
+        private Recovery Unpetrify(Character character, string victim)
         {
             if (character == null)
                 return null;
 
             int amount = character.data.petrifyAmount;
-            return new Repair($"returned the petrification of {victim} to {amount}%", () => character.photonView.RPC(RpcNames.SyncPetrify, RpcTarget.All, amount));
+            return new Recovery($"returned the petrification of {victim} to {amount}%", target => character.photonView.RPC(RpcNames.SyncPetrify, target, amount), true);
         }
 
-        private Repair WakeUp(Character character, string victim)
+        private Recovery WakeUp(Character character, string victim)
         {
-            return character == null ? null : new Repair($"woke {victim} up", () => character.photonView.RPC(RpcNames.UnPassOut, RpcTarget.All));
+            return character == null ? null : new Recovery($"woke {victim} up", target => character.photonView.RPC(RpcNames.UnPassOut, target), true);
         }
 
-        private Repair Return(Character character, string victim)
+        private Recovery Return(Character character, string victim)
         {
             if (character == null)
                 return null;
 
             Vector3 place = character.Center;
-            return new Repair($"returned {victim} to where they stood", () => character.photonView.RPC(RpcNames.Warp, RpcTarget.All, place, true));
+            return new Recovery($"returned {victim} to where they stood", target => character.photonView.RPC(RpcNames.Warp, target, place, true), false);
         }
     }
 }

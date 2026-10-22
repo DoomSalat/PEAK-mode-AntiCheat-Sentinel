@@ -18,6 +18,7 @@ namespace PeakSentinel.Network
         public const byte ArgumentsKey = 4;
         public const byte MethodIndexKey = 5;
         public const byte InstantiationIdKey = 7;
+        public const byte SpawnDataKey = 5;
         public const byte SpawnTimestampKey = 6;
         public const int CachedAgeMilliseconds = 3000;
     }

@@ -49,7 +49,7 @@ namespace PeakSentinel.Reporting
                 record.Suspicious++;
             else if (kind == FindingKind.Cheat)
                 record.Cheats++;
-            else if (kind == FindingKind.Blocked)
+            else if (kind == FindingKind.Blocked || kind == FindingKind.Recovered)
                 record.Blocked++;
         }
 

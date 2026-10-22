@@ -21,7 +21,7 @@ namespace PeakSentinel
     {
         public const string Guid = "peaksentinel";
         public const string Name = "Peak Sentinel";
-        public const string Version = "1.1.0";
+        public const string Version = "1.1.1";
 
         private const string TraceFile = "PeakSentinel.log";
         private const string BansFile = "PeakSentinel.bans.txt";
@@ -38,6 +38,7 @@ namespace PeakSentinel
             SentinelHooks.Findings = findings;
             SentinelHooks.Report = report;
             SentinelHooks.Environment = new EnvironmentMarks();
+            SentinelHooks.Traps = new EnvironmentMarks();
 
             GameObject host = new GameObject(Name) { hideFlags = HideFlags.HideAndDontSave };
             DontDestroyOnLoad(host);
@@ -67,7 +68,7 @@ namespace PeakSentinel
         private void GuardPackets(SentinelSettings settings, SuspicionReport report, MuteList mutes, LatencyMeter latency)
         {
             SentinelHooks.Mutes = mutes;
-            SentinelHooks.Gate = new PacketGate(report, settings.Detection, settings.Flood, mutes, latency);
+            SentinelHooks.Gate = new PacketGate(report, settings.Detection, settings.Flood, mutes, latency, SentinelHooks.Traps);
         }
 
         private void AuditRpcs(GameObject host, SentinelSettings settings, SuspicionReport report, SpawnClock spawns, StateLedger ledger, ForeignObjects objects, TrueAscentState ascent)
@@ -75,7 +76,11 @@ namespace PeakSentinel
             DetectionSettings detection = settings.Detection;
             ItemLocator locator = new ItemLocator();
             CookingEchoes cooking = new CookingEchoes();
-            LegitForces forces = new LegitForces(locator, cooking);
+            CheatKills cheatKills = new CheatKills();
+            SpawnBlame blame = new SpawnBlame();
+            ItemUseLedger uses = new ItemUseLedger();
+            VictimGuard guard = new VictimGuard(report);
+            LegitForces forces = new LegitForces(locator, cooking, SentinelHooks.Traps, blame);
             AreaEffects areas = new AreaEffects(locator);
             ItemRpcAudit items = new ItemRpcAudit(report, settings.Protection, spawns, new BackpackSwap());
             HandGuard hands = new HandGuard(report, settings.Protection);
@@ -86,18 +91,24 @@ namespace PeakSentinel
 
             SentinelHooks.Hands = hands;
             SentinelHooks.Cooking = cooking;
-            SentinelHooks.Instantiate = new InstantiateAudit(report, _trace, detection, settings.Protection, items, objects, locator, ascent);
+            SentinelHooks.Instantiate = new InstantiateAudit(report, _trace, detection, settings.Protection, items, objects, locator, ascent, blame, uses);
+            KickClock kicks = new KickClock();
             SentinelHooks.Router = new RpcRouter(_trace, ledger,
+                new SyncDataGuard(report),
+                kicks,
                 items,
                 hands,
-                new KickShield(report, settings.Other, ascent),
-                new HarmAudit(report, detection, locator, forces, cooking, ascent),
-                new WorldAudit(report, detection),
-                new ControlAudit(report, detection),
-                new CarryAudit(report, detection),
+                new KickShield(report, settings.Other, ascent, kicks),
+                new HarmAudit(report, guard, detection, locator, forces, cooking, ascent, cheatKills),
+                new WorldAudit(report, guard, detection),
+                new ControlAudit(guard, detection),
+                new CarryAudit(guard, detection),
                 new BuildAudit(report, detection, settings.Flood),
-                new ReviveAudit(report, detection, spawns, ascent),
-                new PushAudit(report, detection, forces),
+                new ReviveAudit(guard, detection, spawns, ascent, cheatKills),
+                new PushAudit(guard, detection, forces, kicks),
+                new ItemUseAudit(guard, detection, uses, host.AddComponent<StatusRestorer>()),
+                new BalloonAudit(report, guard, detection, settings.Protection, spawns, objects),
+                new KnockdownAudit(report, guard, detection, forces, SentinelHooks.Environment, kicks, blame),
                 areas,
                 effects,
                 statuses);
@@ -112,9 +123,10 @@ namespace PeakSentinel
             DesyncFixer desync = host.AddComponent<DesyncFixer>();
             desync.Initialize(report, settings.Other, ledger);
             BanGuard banGuard = host.AddComponent<BanGuard>();
-            banGuard.Initialize(report, bans);
+            banGuard.Initialize(report, bans, mutes);
             host.AddComponent<CheatModScan>().Initialize(report, settings.Detection);
             host.AddComponent<IdentityAudit>().Initialize(report, settings.Detection);
+            SentinelHooks.Invisibility = new InvisibilityAudit(report, settings.Detection);
             FlightAudit flight = host.AddComponent<FlightAudit>();
             flight.Initialize(report, _trace, settings.Detection, settings.Flight, new FlightExemptions(new RopeLinks(), SentinelHooks.Environment, spawns, ascent));
             StaminaAudit stamina = host.AddComponent<StaminaAudit>();

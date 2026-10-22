@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
+using Photon.Pun;
 using Unity.Mathematics;
 using UnityEngine;
 using Zorro.Core;
@@ -53,6 +54,25 @@ namespace PeakSentinel.Protection
             int replayed = _ledger.Reapply(player);
             _report.Notice(player, FindingCategory.Other, $"resynced by you: {replayed} of their latest state updates were applied again");
             Fix(PlayerHandler.GetPlayerCharacter(player), "by you");
+        }
+
+        public void ResyncMe()
+        {
+            Character me = Character.localCharacter;
+
+            if (me == null || !PhotonNetwork.InRoom)
+                return;
+
+            if (me.data.fallSeconds <= 0f)
+                me.photonView.RPC(RpcNames.UnFall, RpcTarget.Others);
+
+            if (!me.data.passedOut && !me.data.dead)
+                me.photonView.RPC(RpcNames.UnPassOut, RpcTarget.Others);
+
+            me.photonView.RPC(RpcNames.SyncPetrify, RpcTarget.Others, me.data.petrifyAmount);
+            me.refs.afflictions.PushStatuses();
+            me.refs.afflictions.PushAfflictions();
+            _report.Notice(PhotonNetwork.LocalPlayer, FindingCategory.Other, "resynced yourself for everyone: stood up and woke up on their screens, statuses, effects and petrification sent again");
         }
 
         public void Fix(Character character, string reason)

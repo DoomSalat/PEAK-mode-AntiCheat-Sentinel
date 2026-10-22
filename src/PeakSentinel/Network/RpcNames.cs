@@ -12,6 +12,8 @@ namespace PeakSentinel.Network
         public const string InitHoldingItem = "RPC_InitHoldingItem";
         public const string EquipSlot = "EquipSlotRpc";
         public const string Clone = "RPC_Clone";
+        public const string DartImpact = "RPC_DartImpact";
+        public const string TieBalloon = "RPC_Init";
         public const string Die = "RPCA_Die";
         public const string SetDead = "RPCA_SetDead";
         public const string PassOut = "RPCA_PassOut";

@@ -122,7 +122,10 @@ namespace PeakSentinel.Ui
             int actor = player.ActorNumber;
 
             if (player.IsLocal)
+            {
+                _ui.Button(buttons, ResyncLabel, ResyncWidth, ButtonSize, () => _services.Desync.ResyncMe());
                 return;
+            }
 
             _ui.Button(buttons, ResyncLabel, ResyncWidth, ButtonSize, () => _services.Desync.Resync(player));
 

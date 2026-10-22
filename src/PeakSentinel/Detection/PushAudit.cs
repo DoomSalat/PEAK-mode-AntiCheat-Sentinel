@@ -4,13 +4,11 @@ using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
 using Photon.Pun;
 using UnityEngine;
-using PhotonPlayer = Photon.Realtime.Player;
 
 namespace PeakSentinel.Detection
 {
     public sealed class PushAudit : IRpcAudit
     {
-        private const float KickSeconds = 2f;
         private const float BurstSeconds = 0.15f;
         private const int BurstPushes = 2;
         private const float PulseSeconds = 3f;
@@ -20,25 +18,26 @@ namespace PeakSentinel.Detection
         private const string ExplosionTag = "blasts players with no explosive";
         private const string PushTag = "pushes other players";
 
-        private readonly Dictionary<int, float> _kickedAt = new Dictionary<int, float>();
         private readonly Dictionary<int, float> _blockedUntil = new Dictionary<int, float>();
         private readonly Dictionary<int, Queue<float>> _bursts = new Dictionary<int, Queue<float>>();
         private readonly Dictionary<(int Sender, int Victim), Queue<float>> _pulses = new Dictionary<(int Sender, int Victim), Queue<float>>();
         private readonly Dictionary<(int Sender, int Victim), Vector3> _standing = new Dictionary<(int Sender, int Victim), Vector3>();
         private readonly LegitForces _forces;
-        private readonly SuspicionReport _report;
+        private readonly KickClock _kicks;
+        private readonly VictimGuard _guard;
         private readonly DetectionSettings _detection;
 
-        public PushAudit(SuspicionReport report, DetectionSettings detection, LegitForces forces)
+        public PushAudit(VictimGuard guard, DetectionSettings detection, LegitForces forces, KickClock kicks)
         {
+            _guard = guard;
+            _kicks = kicks;
             _forces = forces;
-            _report = report;
             _detection = detection;
         }
 
         public bool Watches(string method)
         {
-            return method == RpcNames.ForceAtPosition || method == RpcNames.ForceToBodyPart || method == RpcNames.Kick;
+            return method == RpcNames.ForceAtPosition || method == RpcNames.ForceToBodyPart;
         }
 
         public bool Inspect(RpcCall call)
@@ -48,13 +47,7 @@ namespace PeakSentinel.Detection
 
             float now = Time.time;
 
-            if (call.Method == RpcNames.Kick)
-            {
-                _kickedAt[call.Sender.ActorNumber] = now;
-                return true;
-            }
-
-            if (!_detection.HarmToOthers.Value || call.Owner == null || call.FromHost || call.FromLocal || Kicked(call.Sender, now))
+            if (!_detection.HarmToOthers.Value || call.Owner == null || call.FromHost || call.FromLocal || _kicks.JustKicked(call.Sender))
                 return true;
 
             if (call.FromOwner)
@@ -95,11 +88,6 @@ namespace PeakSentinel.Detection
             return Refuse(call, PushTag, $"pushed {PlayerNames.Name(call.Owner)} (no kick, nothing they threw hit them)", victim, pair);
         }
 
-        private bool Kicked(PhotonPlayer sender, float now)
-        {
-            return _kickedAt.TryGetValue(sender.ActorNumber, out float kicked) && now - kicked < KickSeconds;
-        }
-
         private int Record<TKey>(Dictionary<TKey, Queue<float>> windows, TKey key, float now, float seconds)
         {
             if (!windows.TryGetValue(key, out Queue<float> times))
@@ -126,7 +114,7 @@ namespace PeakSentinel.Detection
             Vector3 place = _standing[pair];
             string name = PlayerNames.Name(call.Owner);
             Repair repair = new Repair($"returned {name} to where they stood", () => victim.photonView.RPC(RpcNames.Warp, RpcTarget.All, place, true));
-            return _report.Refuse(call.Sender, FindingCategory.Cheats, tag, action, block, repair);
+            return _guard.Refuse(call.Sender, victim, FindingCategory.Cheats, tag, action, block, null, repair);
         }
     }
 }

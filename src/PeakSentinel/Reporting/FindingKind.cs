@@ -6,6 +6,7 @@ namespace PeakSentinel.Reporting
         Suspicious,
         Cheat,
         Blocked,
+        Recovered,
         Fix,
     }
 }

@@ -20,6 +20,8 @@ namespace PeakSentinel.Reporting
         private const string NoticeLevel = "notice";
         private const string BlockedPrefix = "blocked: ";
         private const string LocalBlockPrefix = "blocked in your game only (you are not the host): ";
+        private const string RecoveredLevel = "RECOVERED";
+        private const string RecoveredPrefix = "recovered: ";
         private const string FixLevel = "FIX";
         private const string FixPrefix = "fix: ";
         private const string UnsureNote = " (heuristic, may be wrong)";
@@ -40,12 +42,26 @@ namespace PeakSentinel.Reporting
 
         public void Flag(PhotonPlayer culprit, FindingCategory category, string action, bool blocked = false, Repair repair = null)
         {
-            Report(culprit, category, action, blocked ? FindingKind.Blocked : FindingKind.Cheat, repair);
+            Report(culprit, category, action, blocked ? FindingKind.Blocked : FindingKind.Cheat, repair, blocked ? BlockPrefix() : string.Empty);
         }
 
         public void Suspect(PhotonPlayer culprit, FindingCategory category, string action, bool blocked = false)
         {
-            Report(culprit, category, action + UnsureNote, blocked ? FindingKind.Blocked : FindingKind.Suspicious, null);
+            Report(culprit, category, action + UnsureNote, blocked ? FindingKind.Blocked : FindingKind.Suspicious, null, blocked ? BlockPrefix() : string.Empty);
+        }
+
+        public bool Block(PhotonPlayer culprit, FindingCategory category, string tag, string action)
+        {
+            Tag(culprit, tag);
+            Report(culprit, category, action, FindingKind.Blocked, null, BlockedPrefix);
+            return false;
+        }
+
+        public bool Recover(PhotonPlayer culprit, FindingCategory category, string tag, string action)
+        {
+            Tag(culprit, tag);
+            Report(culprit, category, action, FindingKind.Recovered, null, RecoveredPrefix);
+            return false;
         }
 
         public bool Refuse(PhotonPlayer culprit, FindingCategory category, string tag, string action, bool block, Repair repair = null)
@@ -87,11 +103,10 @@ namespace PeakSentinel.Reporting
             _findings.Tag(PlayerNames.Actor(culprit), tag);
         }
 
-        private void Report(PhotonPlayer culprit, FindingCategory category, string action, FindingKind kind, Repair repair)
+        private void Report(PhotonPlayer culprit, FindingCategory category, string action, FindingKind kind, Repair repair, string lead)
         {
             string name = PlayerNames.Name(culprit);
             string level = LevelOf(kind);
-            string lead = kind == FindingKind.Blocked ? BlockPrefix() : string.Empty;
             _log.LogWarning($"{level} {name} (actor {PlayerNames.Actor(culprit)}): {action}");
             _trace.Finding(level, culprit, action);
             _findings.Add(PlayerNames.Actor(culprit), name, lead + action, kind, category, repair);
@@ -109,6 +124,9 @@ namespace PeakSentinel.Reporting
             {
                 case FindingKind.Blocked:
                     return BlockedLevel;
+
+                case FindingKind.Recovered:
+                    return RecoveredLevel;
 
                 case FindingKind.Cheat:
                     return CheatLevel;
