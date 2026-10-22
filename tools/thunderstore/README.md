@@ -54,9 +54,13 @@ In the **Esc menu** a player gets an orange **?** if they behaved strangely and 
 - On a client, items spawned through the host look as if the host made them (marked "may be not the host"): only the host sees who really asked.
 - Only the game's developers could protect everyone on the server side. A mod can't change the Photon server.
 
+## Speedrun tab (work in progress)
+
+Off by default. For runners and moderators: chest luck counted with the game's own odds, the map's mushroom table, a game integrity check, optional checks on yourself and a run report to attach to a run. Still being tested.
+
 ## Works with other mods
 
-- **True Final Ascent**: its kick key, Apocalypse weathers, mini, mega and ball modes, ghost votes, energy drink combo, wisp gifts and the rejoin landing count as fair play. In ranked daily runs a TFA host may kick players whose mods are not on its list.
+- **True Final Ascent** (work in progress): its kick key, Apocalypse weathers, mini, mega and ball modes, ghost votes, energy drink combo, wisp gifts and the rejoin landing count as fair play. In ranked daily runs a TFA host may kick players whose mods are not on its list.
 - **Piggyback**: carrying a nearby awake player and its backpack swap are fine.
 
 ## Install

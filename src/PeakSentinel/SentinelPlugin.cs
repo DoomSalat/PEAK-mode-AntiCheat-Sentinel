@@ -21,7 +21,7 @@ namespace PeakSentinel
     {
         public const string Guid = "peaksentinel";
         public const string Name = "Peak Sentinel";
-        public const string Version = "1.0.6";
+        public const string Version = "1.1.0";
 
         private const string TraceFile = "PeakSentinel.log";
         private const string BansFile = "PeakSentinel.bans.txt";
@@ -132,7 +132,7 @@ namespace PeakSentinel
             SentinelWindow window = host.AddComponent<SentinelWindow>();
             window.Initialize($"{Name} {Version}", settings, services);
             SentinelHooks.Window = window;
-            host.AddComponent<SpeedrunOverlay>().Initialize(services.Loot, services.Speedrun, settings.Speedrun, Version);
+            host.AddComponent<SpeedrunOverlay>().Initialize(services.Report, services.Loot, services.Speedrun, settings.Speedrun, Version);
         }
     }
 }

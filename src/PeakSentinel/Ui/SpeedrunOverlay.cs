@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
 using PeakSentinel.Speedrun;
 using TMPro;
@@ -13,10 +14,10 @@ namespace PeakSentinel.Ui
         private const int SortingOrder = 250;
         private const float RefreshSeconds = 0.5f;
         private const float IconSize = 30f;
-        private const float TextSize = 17f;
+        private const float TextSize = 20f;
         private const float Margin = 18f;
-        private const float OutlineWidth = 0.25f;
-        private const string RunFormat = "<b><color=#{0}>{1}</color></b>";
+        private const float FallbackOutline = 0.12f;
+        private const string RunFormat = "<size=115%><color=#{0}>{1}</color></size>";
         private const string TodayFormat = "   <size=75%><color=#{0}>today {1}</color></size>";
         private const string NoChests = "no chests yet";
         private const string InfoFormat = "<size=70%><color=#{0}>{1}</color></size>";
@@ -35,6 +36,7 @@ namespace PeakSentinel.Ui
         private readonly LuckText _text = new LuckText();
         private readonly List<string> _info = new List<string>();
         private readonly RunRules _rules = new RunRules();
+        private SuspicionReport _report;
         private LootLedger _ledger;
         private SpeedrunMonitor _monitor;
         private SpeedrunSettings _settings;
@@ -45,9 +47,11 @@ namespace PeakSentinel.Ui
         private TextMeshProUGUI _label;
         private (int Loot, int Alerts, int Journal, RunCategory Category, bool Luck, bool Integrity, bool Record) _shown = (-1, -1, -1, RunCategory.NoMajorGlitches, false, false, false);
         private float _nextRefresh;
+        private bool _styled;
 
-        public void Initialize(LootLedger ledger, SpeedrunMonitor monitor, SpeedrunSettings settings, string version)
+        public void Initialize(SuspicionReport report, LootLedger ledger, SpeedrunMonitor monitor, SpeedrunSettings settings, string version)
         {
+            _report = report;
             _ledger = ledger;
             _monitor = monitor;
             _settings = settings;
@@ -75,6 +79,7 @@ namespace PeakSentinel.Ui
             if (_canvas == null || _font != font)
                 Build(font);
 
+            StyleLikeFeed();
             _canvas.SetActive(true);
             (int Loot, int Alerts, int Journal, RunCategory Category, bool Luck, bool Integrity, bool Record) wanted = (_ledger.Version, _monitor.Version, _monitor.Journal.Version, _settings.Category.Value, _settings.TrackLuck.Value, _settings.CheckIntegrity.Value, _settings.RecordRun.Value);
 
@@ -113,9 +118,24 @@ namespace PeakSentinel.Ui
             _clover = ui.Icon(badge, ui.Clover, IconSize);
             _label = ui.Label(badge, string.Empty, TextSize, Color.white, true);
             _label.textWrappingMode = TextWrappingModes.NoWrap;
-            _label.outlineWidth = OutlineWidth;
+            _label.alignment = TextAlignmentOptions.TopRight;
+            _label.outlineWidth = FallbackOutline;
             _label.outlineColor = Color.black;
+            _styled = false;
             _shown = (-1, -1, -1, RunCategory.NoMajorGlitches, false, false, false);
+        }
+
+        private void StyleLikeFeed()
+        {
+            PlayerConnectionLog feed = _report.Feed;
+
+            if (_styled || feed == null)
+                return;
+
+            _styled = true;
+            _label.font = feed.text.font;
+            _label.fontSharedMaterial = feed.text.fontSharedMaterial;
+            Relayout();
         }
 
         private void Show(bool luck, bool integrity, bool record)
@@ -145,6 +165,13 @@ namespace PeakSentinel.Ui
             string color = ColorUtility.ToHtmlStringRGB(alerts ? AlertColor : Quiet);
             string info = string.Format(InfoFormat, color, string.Join(InfoSeparator, _info));
             _label.text = text.Length == 0 ? info : text + LineBreak + info;
+            Relayout();
+        }
+
+        private void Relayout()
+        {
+            _label.ForceMeshUpdate();
+            LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)_label.transform.parent);
         }
 
         private string Part(string format, LootTally tally)

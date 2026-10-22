@@ -1,5 +1,5 @@
-using System;
 using System.Collections.Generic;
+using PeakSentinel.Reporting;
 using Portningsbolaget.Platforms;
 using UnityEngine;
 using PhotonPlayer = Photon.Realtime.Player;
@@ -9,7 +9,6 @@ namespace PeakSentinel.Ui
     public sealed class AvatarCache
     {
         private const string UserIdProperty = "UserID";
-        private const string PlatformProperty = "PlatformFamily";
 
         private readonly Dictionary<string, Sprite> _avatars = new Dictionary<string, Sprite>();
         private readonly HashSet<string> _requested = new HashSet<string>();
@@ -24,16 +23,10 @@ namespace PeakSentinel.Ui
             if (_avatars.TryGetValue(id, out Sprite avatar))
                 return avatar;
 
-            if (_requested.Add(id) && IsSamePlatform(player) && ulong.TryParse(id, out ulong userId))
+            if (_requested.Add(id) && PlayerPlatforms.SharesMine(player) && ulong.TryParse(id, out ulong userId))
                 PlatformManager.Platform.GetAvatarAsync(userId, texture => Store(id, texture));
 
             return null;
-        }
-
-        private bool IsSamePlatform(PhotonPlayer player)
-        {
-            PlatformUtility.PlatformFamily local = PlatformManager.Platform.PlatformFamily;
-            return !(player.CustomProperties[PlatformProperty] is string family) || !Enum.TryParse(family, out PlatformUtility.PlatformFamily remote) || remote == local;
         }
 
         private void Store(string id, Texture2D texture)

@@ -1,11 +1,12 @@
 # Changelog
 
-## Next
+## 1.1.0
 
+- Work in progress: True Final Ascent support and the Speedrun tab are new and still being tested. Please send logs if something looks wrong.
 - Compatible with True Final Ascent: its kick key, Apocalypse weathers that lift or carry players (antigrav, flood, tsunami, avalanche, storms), mini, mega and ball modes, ghost vote buffs, the energy drink combo, late join protection, wisp gifts and the rejoin landing are no longer reported as cheats. Everything else is still checked.
 - The window header shows when a True Final Ascent mode (Final Ascent, Apocalypse) is on in the lobby.
 - A shield icon marks blocked actions in the in-game feed and the Log tab.
-
+- Checked against the PEAK update of 22 October 2026 (Steam sign-in for Photon, cross-play). Name and Steam ID spoofing checks now skip players on another platform (console players carry their own platform ID, not a Steam ID).
 - New Speedrun tab: every chest you open as the host is logged with the game's own odds, and the luck number shows how rare this run's loot is (for example "1 in 340"). Speedrun moderators caught a cheated world record by counting exactly this by hand.
 - Luck for today too: all runs since midnight while the game is open, next to the luck of the current run.
 - Speedrun tab shows the mushroom table of the map: which mushroom gives which effect and a short code. The same map always gives the same code, so a different code on the same seed means the game was changed.

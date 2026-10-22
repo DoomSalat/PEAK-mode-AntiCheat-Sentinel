@@ -53,6 +53,10 @@ namespace PeakSentinel.Detection
         private void Check(PhotonPlayer player)
         {
             CheckRename(player);
+
+            if (!PlayerPlatforms.SharesMine(player))
+                return;
+
             CheckSteamName(player);
             CheckSteamId(player);
         }
