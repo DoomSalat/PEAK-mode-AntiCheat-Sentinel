@@ -1,5 +1,25 @@
 # Changelog
 
+## Next
+
+- Compatible with True Final Ascent: its kick key, Apocalypse weathers that lift or carry players (antigrav, flood, tsunami, avalanche, storms), mini, mega and ball modes, ghost vote buffs, the energy drink combo, late join protection, wisp gifts and the rejoin landing are no longer reported as cheats. Everything else is still checked.
+- The window header shows when a True Final Ascent mode (Final Ascent, Apocalypse) is on in the lobby.
+- A shield icon marks blocked actions in the in-game feed and the Log tab.
+
+- New Speedrun tab: every chest you open as the host is logged with the game's own odds, and the luck number shows how rare this run's loot is (for example "1 in 340"). Speedrun moderators caught a cheated world record by counting exactly this by hand.
+- Luck for today too: all runs since midnight while the game is open, next to the luck of the current run.
+- Speedrun tab shows the mushroom table of the map: which mushroom gives which effect and a short code. The same map always gives the same code, so a different code on the same seed means the game was changed.
+- Game integrity check in the Speedrun tab: other mods that patch loot, map items or mushrooms, code loaded from outside the game and BepInEx, a short code of the game DLL and of the loot tables (and a warning if the loot tables change while you play). This is what a mod whitelist cannot see.
+- Speedrun tab, map: scene, biomes and, with TerrainRandomiser, its version, file code and all its settings (so "Fully random" can be checked).
+- Speedrun tab, map items: luck of berries and items spawned on the map, counted apart from chests.
+- Speedrun checks on yourself (optional): Sentinel's flight, speed and stamina checks, and a check that a hard landing really hurts you (the game's own fall damage formula).
+- Speedrun integrity also watches game speed (slow motion, fast forward, speed hack against the system clock) and movement constants (gravity, run, jump).
+- Speedrun journal (optional): a file per day with every attempt, its number and run ID, chests and alerts; each line is chained to the previous one by a hash, so an edited or removed line shows.
+- Speedrun overlay: the clover luck badge now also shows the Sentinel version, attempt number, run ID and the integrity state.
+- Speedrun category presets: NMG, Glitched and Any%. In Glitched and Any% the flight, speed and fall damage checks on yourself are off, because flight glitches and Glider Rest are allowed there. The category is shown on the overlay, in the journal and in the report; changing it during an attempt is an alert.
+- Export run report: one file with the map, integrity, alerts, Sentinel findings about you, mushrooms, luck and every roll, to attach to a run.
+- Everything in the Speedrun tab is off by default: tick "Track loot luck" (and the badge box) to use it.
+
 ## 1.0.6
 
 - Invincibility from Scout's Perseverance (the blue healing amulet) is recognised when it is used in hand or was just put down or passed on. The 1.0.2 note about this was wrong: that change had not made it into the code.

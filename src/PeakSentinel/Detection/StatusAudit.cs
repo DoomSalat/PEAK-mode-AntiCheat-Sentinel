@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PeakSentinel.Compat;
 using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
@@ -19,9 +20,11 @@ namespace PeakSentinel.Detection
         private SuspicionReport _report;
         private DetectionSettings _detection;
         private ItemLocator _locator;
+        private TrueAscentState _ascent;
 
-        public void Initialize(SuspicionReport report, DetectionSettings detection, ItemLocator locator)
+        public void Initialize(SuspicionReport report, DetectionSettings detection, ItemLocator locator, TrueAscentState ascent)
         {
+            _ascent = ascent;
             _locator = locator;
             _report = report;
             _detection = detection;
@@ -109,6 +112,9 @@ namespace PeakSentinel.Detection
                 return true;
 
             if (status == CharacterAfflictions.STATUSTYPE.Hunger && !consumer.refs.afflictions.canGetHungry)
+                return true;
+
+            if (_ascent.StatusCause(consumer, status) != null)
                 return true;
 
             return _locator.Holds<Peak.HealingAmulet>(consumer) || consumer.refs.afflictions.HasAfflictionType(Peak.Afflictions.Affliction.AfflictionType.HealAll, out _);

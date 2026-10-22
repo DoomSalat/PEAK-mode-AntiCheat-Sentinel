@@ -14,6 +14,7 @@ namespace PeakSentinel.Settings
             Flood = new FloodSettings(config);
             Flight = new FlightSettings(config);
             Stamina = new StaminaSettings(config);
+            Speedrun = new SpeedrunSettings(config);
         }
 
         public DebugSettings Debug { get; }
@@ -24,5 +25,6 @@ namespace PeakSentinel.Settings
         public FloodSettings Flood { get; }
         public FlightSettings Flight { get; }
         public StaminaSettings Stamina { get; }
+        public SpeedrunSettings Speedrun { get; }
     }
 }

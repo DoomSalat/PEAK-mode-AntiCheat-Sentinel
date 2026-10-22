@@ -1,4 +1,5 @@
 using Peak.Afflictions;
+using PeakSentinel.Compat;
 using PeakSentinel.Network;
 using UnityEngine;
 
@@ -26,9 +27,11 @@ namespace PeakSentinel.Detection.Flight
         private readonly RopeLinks _ropes;
         private readonly EnvironmentMarks _environment;
         private readonly SpawnClock _spawns;
+        private readonly TrueAscentState _ascent;
 
-        public FlightExemptions(RopeLinks ropes, EnvironmentMarks environment, SpawnClock spawns)
+        public FlightExemptions(RopeLinks ropes, EnvironmentMarks environment, SpawnClock spawns, TrueAscentState ascent)
         {
+            _ascent = ascent;
             _spawns = spawns;
             _ropes = ropes;
             _environment = environment;
@@ -75,6 +78,11 @@ namespace PeakSentinel.Detection.Flight
 
             if (environment != null)
                 return environment;
+
+            string ascent = _ascent.MovementCause(character);
+
+            if (ascent != null)
+                return ascent;
 
             if (_ropes.IsTied(actor))
                 return RopeCarabiner;

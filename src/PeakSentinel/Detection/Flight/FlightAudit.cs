@@ -31,6 +31,8 @@ namespace PeakSentinel.Detection.Flight
         private int _groundMask;
         private float _nextSample;
 
+        public bool CheckLocal { get; set; } // Set: SpeedrunMonitor turns the check of the local player on for speedruns
+
         public void Initialize(SuspicionReport report, DebugTrace trace, DetectionSettings detection, FlightSettings settings, FlightExemptions exemptions)
         {
             _report = report;
@@ -50,7 +52,7 @@ namespace PeakSentinel.Detection.Flight
 
             foreach (Character character in Character.AllCharacters)
             {
-                if (character != null && !character.IsLocal && !character.isBot && character.photonView.Owner != null)
+                if (character != null && (!character.IsLocal || CheckLocal) && !character.isBot && character.photonView.Owner != null)
                     Sample(character, Time.time);
             }
         }
@@ -122,7 +124,7 @@ namespace PeakSentinel.Detection.Flight
 
         private void Punish(Character character, FlightTrack track, string action)
         {
-            bool snapBack = _detection.BlockFlight.Value && PhotonNetwork.IsMasterClient && track.LastGround.HasValue;
+            bool snapBack = _detection.BlockFlight.Value && PhotonNetwork.IsMasterClient && track.LastGround.HasValue && !character.IsLocal;
             _report.Tag(character.photonView.Owner, FliesTag);
             _report.Suspect(character.photonView.Owner, FindingCategory.Cheats, snapBack ? action + ", returned to the ground" : action, snapBack);
 

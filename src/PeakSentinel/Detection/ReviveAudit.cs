@@ -1,3 +1,4 @@
+using PeakSentinel.Compat;
 using PeakSentinel.Game;
 using PeakSentinel.Network;
 using PeakSentinel.Reporting;
@@ -18,9 +19,11 @@ namespace PeakSentinel.Detection
         private readonly SuspicionReport _report;
         private readonly DetectionSettings _detection;
         private readonly SpawnClock _spawns;
+        private readonly TrueAscentState _ascent;
 
-        public ReviveAudit(SuspicionReport report, DetectionSettings detection, SpawnClock spawns)
+        public ReviveAudit(SuspicionReport report, DetectionSettings detection, SpawnClock spawns, TrueAscentState ascent)
         {
+            _ascent = ascent;
             _spawns = spawns;
             _report = report;
             _detection = detection;
@@ -51,7 +54,7 @@ namespace PeakSentinel.Detection
                 return true;
 
             if (call.FromOwner)
-                return _spawns.SpawnedWithin(target, FreshSpawnSeconds);
+                return _spawns.SpawnedWithin(target, FreshSpawnSeconds) || _ascent.LandingCause(target) != null;
 
             Character reviver = PlayerHandler.GetPlayerCharacter(call.Sender);
             Item item = reviver == null ? null : reviver.data.currentItem;

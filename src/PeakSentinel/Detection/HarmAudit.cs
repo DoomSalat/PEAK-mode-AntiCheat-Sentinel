@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PeakSentinel.Compat;
 using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
@@ -31,11 +32,13 @@ namespace PeakSentinel.Detection
         private readonly ItemLocator _locator;
         private readonly LegitForces _forces;
         private readonly CookingEchoes _cooking;
+        private readonly TrueAscentState _ascent;
         private readonly SuspicionReport _report;
         private readonly DetectionSettings _detection;
 
-        public HarmAudit(SuspicionReport report, DetectionSettings detection, ItemLocator locator, LegitForces forces, CookingEchoes cooking)
+        public HarmAudit(SuspicionReport report, DetectionSettings detection, ItemLocator locator, LegitForces forces, CookingEchoes cooking, TrueAscentState ascent)
         {
+            _ascent = ascent;
             _forces = forces;
             _cooking = cooking;
             _locator = locator;
@@ -114,6 +117,14 @@ namespace PeakSentinel.Detection
 
             if (self == null || (self.data.currentItem != null && self.data.currentItem.TryGetComponent(out Action_WarpToRandomPlayer _)) || _locator.OwnedNear<Peak.WarpOnThrow>(call.Sender, destination, WarpItemReach))
                 return true;
+
+            string landing = _ascent.LandingCause(self);
+
+            if (landing != null)
+            {
+                _report.Notice(call.Sender, FindingCategory.Cheats, $"teleported themselves {WhereTo(self, destination)} ({landing})");
+                return true;
+            }
 
             bool block = _detection.BlockHarmToOthers.Value;
             Vector3 place = self.Center;

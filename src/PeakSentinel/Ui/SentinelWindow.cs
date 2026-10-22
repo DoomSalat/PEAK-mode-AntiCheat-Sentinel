@@ -29,8 +29,9 @@ namespace PeakSentinel.Ui
         private const string HostIsYou = "Lobby protected: you are the host";
         private const string HostRuns = "Lobby protected: host {0} runs Peak Sentinel";
         private const string HostLacks = "Lobby not protected: host {0} has no Peak Sentinel";
+        private const string AscentFormat = "True Final Ascent: {0}";
 
-        private static readonly string[] Tabs = { "Log", "Items", "Cheats", "Other", "Players", "Bans" }; // Static: fixed tab captions, in page order
+        private static readonly string[] Tabs = { "Log", "Items", "Cheats", "Other", "Players", "Bans", "Speedrun" }; // Static: fixed tab captions, in page order
 
         private readonly FeedFilter _filter = new FeedFilter();
         private readonly AvatarCache _avatars = new AvatarCache();
@@ -43,6 +44,7 @@ namespace PeakSentinel.Ui
         private SettingsBinder _binder;
         private HotkeyButton _hotkey;
         private TextMeshProUGUI _lobby;
+        private TextMeshProUGUI _mode;
         private GameObject _canvas;
         private int _tab;
         private float _nextRefresh;
@@ -133,6 +135,7 @@ namespace PeakSentinel.Ui
             AddPage(body, page => new OtherPage(context, page, _settings.Other));
             AddPage(body, page => new PlayersPage(context, page, _services, _avatars));
             AddPage(body, page => new BansPage(_ui, page, _services.Bans));
+            AddPage(body, page => new SpeedrunPage(context, page, _services, _settings.Speedrun));
             Select(_tab);
         }
 
@@ -144,6 +147,8 @@ namespace PeakSentinel.Ui
             title.raycastTarget = true;
             title.gameObject.AddComponent<DragHandle>().Initialize(panel, _canvas.GetComponent<Canvas>());
             _ui.Flexible(title, 1f, 0f);
+            _mode = _ui.Label(header, string.Empty, LobbySize, UiPalette.Text, false);
+            _mode.alignment = TextAlignmentOptions.MidlineRight;
             _lobby = _ui.Label(header, string.Empty, LobbySize, UiPalette.Notice, false);
             _lobby.alignment = TextAlignmentOptions.MidlineRight;
             _hotkey = new HotkeyButton(_ui, header, _settings.Manager.ToggleKey);
@@ -195,6 +200,8 @@ namespace PeakSentinel.Ui
         private void ShowLobby()
         {
             PhotonPlayer host = PhotonNetwork.InRoom ? PhotonNetwork.MasterClient : null;
+            string mode = _services.Ascent.ModeName;
+            _mode.text = mode == null ? string.Empty : string.Format(AscentFormat, mode);
 
             if (host == null)
             {

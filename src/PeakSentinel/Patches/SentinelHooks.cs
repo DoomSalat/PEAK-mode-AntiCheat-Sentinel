@@ -3,6 +3,7 @@ using PeakSentinel.Detection.Flight;
 using PeakSentinel.Network;
 using PeakSentinel.Protection;
 using PeakSentinel.Reporting;
+using PeakSentinel.Speedrun;
 using PeakSentinel.Ui;
 
 namespace PeakSentinel.Patches
@@ -17,6 +18,7 @@ namespace PeakSentinel.Patches
         public static InstantiateAudit Instantiate { get; set; } // Set: assigned once by SentinelPlugin
         public static HandGuard Hands { get; set; } // Set: assigned once by SentinelPlugin, told about own outgoing pickup requests
         public static CookingEchoes Cooking { get; set; } // Set: assigned once by SentinelPlugin, filled by the cooking patch
+        public static LootLedger Loot { get; set; } // Set: assigned once by SentinelPlugin, filled by the loot roll patch
         public static EnvironmentMarks Environment { get; set; } // Set: assigned once by SentinelPlugin, filled by the environment patches
         public static SentinelWindow Window { get; set; } // Set: assigned once by SentinelPlugin, frees the cursor while open
     }

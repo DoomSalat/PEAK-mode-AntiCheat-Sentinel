@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Peak.Afflictions;
+using PeakSentinel.Compat;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
 using UnityEngine;
@@ -23,10 +24,14 @@ namespace PeakSentinel.Detection.Stamina
         private DebugTrace _trace;
         private DetectionSettings _detection;
         private StaminaSettings _settings;
+        private TrueAscentState _ascent;
         private float _nextSample;
 
-        public void Initialize(SuspicionReport report, DebugTrace trace, DetectionSettings detection, StaminaSettings settings)
+        public bool CheckLocal { get; set; } // Set: SpeedrunMonitor turns the check of the local player on for speedruns
+
+        public void Initialize(SuspicionReport report, DebugTrace trace, DetectionSettings detection, StaminaSettings settings, TrueAscentState ascent)
         {
+            _ascent = ascent;
             _report = report;
             _trace = trace;
             _detection = detection;
@@ -42,7 +47,7 @@ namespace PeakSentinel.Detection.Stamina
 
             foreach (Character character in Character.AllCharacters)
             {
-                if (character != null && !character.IsLocal && !character.isBot && character.photonView.Owner != null)
+                if (character != null && (!character.IsLocal || CheckLocal) && !character.isBot && character.photonView.Owner != null)
                     Sample(character, Time.time);
             }
         }
@@ -110,6 +115,11 @@ namespace PeakSentinel.Detection.Stamina
 
             if (afflictions.HasAfflictionType(Affliction.AfflictionType.InfiniteStamina, out _) || afflictions.HasAfflictionType(Affliction.AfflictionType.FasterBoi, out _))
                 return StaminaItem;
+
+            string ascent = _ascent.StaminaCause(character);
+
+            if (ascent != null)
+                return ascent;
 
             return stamina <= _settings.MinDrop.Value ? Empty : null;
         }

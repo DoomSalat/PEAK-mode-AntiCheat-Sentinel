@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Peak.Afflictions;
+using PeakSentinel.Compat;
 using PeakSentinel.Game;
 using PeakSentinel.Network;
 using PeakSentinel.Reporting;
@@ -22,6 +23,7 @@ namespace PeakSentinel.Detection
         private const float CampfireReachScale = 1.5f;
         private const float GivenItemSeconds = 60f;
         private const float ItemReach = 4f;
+        private const float LateJoinSeconds = 60f;
 
         private static readonly HashSet<Affliction.AfflictionType> Watched = new HashSet<Affliction.AfflictionType> // Static: fixed effects that cheats fake for godmode or endless stamina
         {
@@ -36,9 +38,13 @@ namespace PeakSentinel.Detection
         private ItemRpcAudit _items;
         private AreaEffects _areas;
         private ItemLocator _locator;
+        private TrueAscentState _ascent;
+        private SpawnClock _spawns;
 
-        public void Initialize(SuspicionReport report, DebugTrace trace, DetectionSettings detection, ItemRpcAudit items, AreaEffects areas, ItemLocator locator)
+        public void Initialize(SuspicionReport report, DebugTrace trace, DetectionSettings detection, ItemRpcAudit items, AreaEffects areas, ItemLocator locator, TrueAscentState ascent, SpawnClock spawns)
         {
+            _ascent = ascent;
+            _spawns = spawns;
             _locator = locator;
             _areas = areas;
             _items = items;
@@ -61,7 +67,7 @@ namespace PeakSentinel.Detection
                 if (_items.RefusedGiveWithin(player, GivenItemSeconds))
                     SettleGiven(player, effect);
                 else
-                    Settle(player, effect, ConsumedSource(player, time) ?? ItemSource(player, effect) ?? _areas.SourceNear(PlayerHandler.GetPlayerCharacter(player)));
+                    Settle(player, effect, ConsumedSource(player, time) ?? ItemSource(player, effect) ?? _areas.SourceNear(PlayerHandler.GetPlayerCharacter(player)) ?? AscentSource(player, effect));
             }
         }
 
@@ -173,6 +179,12 @@ namespace PeakSentinel.Detection
             }
 
             return false;
+        }
+
+        private string AscentSource(PhotonPlayer player, Affliction.AfflictionType effect)
+        {
+            Character character = PlayerHandler.GetPlayerCharacter(player);
+            return character == null ? null : _ascent.EffectCause(character, effect, _spawns.SpawnedWithin(character, LateJoinSeconds));
         }
 
         private void Settle(PhotonPlayer player, Affliction.AfflictionType effect, string source)

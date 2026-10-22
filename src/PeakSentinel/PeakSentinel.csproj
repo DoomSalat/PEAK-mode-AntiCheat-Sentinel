@@ -26,6 +26,10 @@
       <HintPath>$(ManagedDirectory)\Assembly-CSharp.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Sirenix.Serialization">
+      <HintPath>$(ManagedDirectory)\Sirenix.Serialization.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="PhotonUnityNetworking" Publicize="true">
       <HintPath>$(ManagedDirectory)\PhotonUnityNetworking.dll</HintPath>
       <Private>false</Private>

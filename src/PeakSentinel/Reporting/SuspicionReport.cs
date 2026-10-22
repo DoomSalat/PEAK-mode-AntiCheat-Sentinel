@@ -10,7 +10,7 @@ namespace PeakSentinel.Reporting
     {
         private const float RepeatSeconds = 2f;
         private const string FeedFormat = "<color=#5AA9FF>[Sentinel]</color> <color=#FFD060>{1}</color> {3}<color={0}>{2}</color>";
-        private const string LeadFormat = "<color=#5AA9FF>{0}</color>";
+        private const string LeadFormat = FeedIcons.Shield + "<color=#5AA9FF>{0}</color>";
         private const string CheatColor = "#FF6060";
         private const string SuspectColor = "#FFA040";
         private const string GoodColor = "#70DC70";

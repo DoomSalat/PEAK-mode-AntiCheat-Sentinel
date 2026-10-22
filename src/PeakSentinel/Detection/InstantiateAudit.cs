@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PeakSentinel.Compat;
 using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
@@ -29,10 +30,12 @@ namespace PeakSentinel.Detection
         private readonly ItemRpcAudit _items;
         private readonly ForeignObjects _objects;
         private readonly ItemLocator _locator;
+        private readonly TrueAscentState _ascent;
         private bool _removeNext;
 
-        public InstantiateAudit(SuspicionReport report, DebugTrace trace, DetectionSettings detection, ProtectionSettings protection, ItemRpcAudit items, ForeignObjects objects, ItemLocator locator)
+        public InstantiateAudit(SuspicionReport report, DebugTrace trace, DetectionSettings detection, ProtectionSettings protection, ItemRpcAudit items, ForeignObjects objects, ItemLocator locator, TrueAscentState ascent)
         {
+            _ascent = ascent;
             _locator = locator;
             _objects = objects;
             _protection = protection;
@@ -95,6 +98,14 @@ namespace PeakSentinel.Detection
             if (_locator.LooseItemNear(creator, created.transform.position, BreakReach, created))
             {
                 _report.Notice(creator, FindingCategory.Items, $"got '{item.GetItemName()}' out of an item they broke");
+                return;
+            }
+
+            string ascent = created.TryGetComponent(out PhotonView view) ? _ascent.SpawnCause(view) : null;
+
+            if (ascent != null)
+            {
+                _report.Notice(creator, FindingCategory.Items, $"spawned '{item.GetItemName()}' ({ascent})");
                 return;
             }
 

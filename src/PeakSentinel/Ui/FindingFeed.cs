@@ -149,7 +149,8 @@ namespace PeakSentinel.Ui
         {
             string who = Actor == 0 ? $"{finding.Name}: " : string.Empty;
             string repeats = finding.Repeats > 1 ? string.Format(RepeatsFormat, finding.Repeats, finding.LastSeen.ToString(TimeFormat)) : string.Empty;
-            return RichText.Paint($"[{finding.Time.ToString(TimeFormat)}] <noparse>{NoParse.Replace(who + finding.Text, string.Empty)}</noparse>{repeats}", ColorOf(finding.Kind));
+            string icon = finding.Kind == FindingKind.Blocked ? FeedIcons.Shield : string.Empty;
+            return RichText.Paint($"[{finding.Time.ToString(TimeFormat)}] <noparse>{NoParse.Replace(who, string.Empty)}</noparse>{icon}<noparse>{NoParse.Replace(finding.Text, string.Empty)}</noparse>{repeats}", ColorOf(finding.Kind));
         }
 
         private bool Matches(FindingLog.Finding finding, string search)

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PeakSentinel.Compat;
 using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
@@ -17,9 +18,11 @@ namespace PeakSentinel.Protection
         private readonly Dictionary<int, float> _kicks = new Dictionary<int, float>();
         private readonly SuspicionReport _report;
         private readonly OtherSettings _settings;
+        private readonly TrueAscentState _ascent;
 
-        public KickShield(SuspicionReport report, OtherSettings settings)
+        public KickShield(SuspicionReport report, OtherSettings settings, TrueAscentState ascent)
         {
+            _ascent = ascent;
             _report = report;
             _settings = settings;
         }
@@ -90,7 +93,7 @@ namespace PeakSentinel.Protection
 
         private bool IsKickMode()
         {
-            return RunSettings.GetValue(RunSettings.SETTINGTYPE.HelpingHand) == 1;
+            return RunSettings.GetValue(RunSettings.SETTINGTYPE.HelpingHand) == 1 || _ascent.KicksAllowed;
         }
     }
 }
