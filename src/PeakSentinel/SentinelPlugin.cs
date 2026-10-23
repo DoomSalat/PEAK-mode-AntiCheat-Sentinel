@@ -21,7 +21,7 @@ namespace PeakSentinel
     {
         public const string Guid = "peaksentinel";
         public const string Name = "Peak Sentinel";
-        public const string Version = "1.1.2";
+        public const string Version = "1.1.3";
 
         private const string TraceFile = "PeakSentinel.log";
         private const string BansFile = "PeakSentinel.bans.txt";

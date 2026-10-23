@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.2
+## 1.1.3
 
 - Cross-play: the Players tab shows which platform each player is on (PC, Mac, PlayStation, Xbox, Switch, Android, iOS) with an icon.
 - The Bans tab shows when each player was banned. Older bans show "ban date unknown"; shared ban lists keep their dates.
@@ -13,6 +13,9 @@
 - Players tab: a player whose name keeps changing (animated nickname) or new findings no longer rebuild the list every moment, so its buttons stay usable. Names, status and findings update in place.
 - Name changes mid-game are one finding per player with a counter (x N) instead of a new line for every name.
 - Players tab: a player's profile has a voice volume slider (0–200%). It is the same volume as the game's slider in the Esc menu.
+
+## 1.1.2
+
 - More crash protection: broken run settings (also when a client asks the host to start the run), broken map item data and NaN or infinite body positions are always refused. Hiding the map's loose items is now host-only.
 - Invisibility (Admin_menukz) is now really undone: the invisible player's body is moved to where they stand. In 1.1.1 it was only reported.
 
