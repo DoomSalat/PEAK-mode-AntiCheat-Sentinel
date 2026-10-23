@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -7,10 +9,11 @@ namespace PeakSentinel.Protection
     public sealed class BanList
     {
         private const char Separator = '\t';
+        private const string DateFormat = "yyyy-MM-dd HH:mm";
 
         private static readonly char[] LineBreaks = { '\r', '\n' }; // Static: fixed line separators for imported lists
 
-        private readonly Dictionary<string, string> _names = new Dictionary<string, string>();
+        private readonly Dictionary<string, BanEntry> _entries = new Dictionary<string, BanEntry>();
         private readonly string _file;
 
         public BanList(string file)
@@ -19,17 +22,17 @@ namespace PeakSentinel.Protection
             Load();
         }
 
-        public IEnumerable<KeyValuePair<string, string>> Entries => _names.OrderBy(entry => entry.Value);
-        public int Count => _names.Count;
+        public IEnumerable<BanEntry> Entries => _entries.Values.OrderBy(entry => entry.Name);
+        public int Count => _entries.Count;
 
         public bool Contains(string userId)
         {
-            return !string.IsNullOrEmpty(userId) && _names.ContainsKey(userId);
+            return !string.IsNullOrEmpty(userId) && _entries.ContainsKey(userId);
         }
 
         public void Ban(string userId, string name)
         {
-            _names[userId] = name;
+            _entries[userId] = new BanEntry(userId, name, DateTime.Now);
             Save();
         }
 
@@ -42,14 +45,14 @@ namespace PeakSentinel.Protection
         {
             int added = 0;
 
-            foreach (string line in (text ?? string.Empty).Split(LineBreaks, System.StringSplitOptions.RemoveEmptyEntries))
+            foreach (string line in (text ?? string.Empty).Split(LineBreaks, StringSplitOptions.RemoveEmptyEntries))
             {
-                (string userId, string name) = Parse(line.Trim());
+                BanEntry entry = Parse(line.Trim());
 
-                if (userId.Length == 0 || _names.ContainsKey(userId))
+                if (entry.UserId.Length == 0 || _entries.ContainsKey(entry.UserId))
                     continue;
 
-                _names[userId] = name;
+                _entries[entry.UserId] = entry;
                 added++;
             }
 
@@ -61,8 +64,13 @@ namespace PeakSentinel.Protection
 
         public void Unban(string userId)
         {
-            if (_names.Remove(userId))
+            if (_entries.Remove(userId))
                 Save();
+        }
+
+        public string DateOf(BanEntry entry)
+        {
+            return entry.BannedAt.HasValue ? entry.BannedAt.Value.ToString(DateFormat, CultureInfo.InvariantCulture) : null;
         }
 
         private void Load()
@@ -72,22 +80,33 @@ namespace PeakSentinel.Protection
 
             foreach (string line in File.ReadAllLines(_file))
             {
-                (string userId, string name) = Parse(line);
+                BanEntry entry = Parse(line);
 
-                if (userId.Length > 0)
-                    _names[userId] = name;
+                if (entry.UserId.Length > 0)
+                    _entries[entry.UserId] = entry;
             }
         }
 
-        private (string UserId, string Name) Parse(string line)
+        private BanEntry Parse(string line)
         {
-            string[] parts = line.Split(new[] { Separator }, 2);
-            return (parts[0].Trim(), parts.Length > 1 ? parts[1].Trim() : parts[0].Trim());
+            string[] parts = line.Split(Separator);
+            string userId = parts[0].Trim();
+            int nameParts = parts.Length - 1;
+            DateTime? bannedAt = null;
+
+            if (parts.Length > 2 && DateTime.TryParseExact(parts[parts.Length - 1].Trim(), DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime date))
+            {
+                bannedAt = date;
+                nameParts--;
+            }
+
+            string name = nameParts > 0 ? string.Join(Separator.ToString(), parts, 1, nameParts).Trim() : userId;
+            return new BanEntry(userId, name, bannedAt);
         }
 
         private IEnumerable<string> Lines()
         {
-            return _names.Select(entry => entry.Key + Separator + entry.Value);
+            return _entries.Values.Select(entry => entry.BannedAt.HasValue ? entry.UserId + Separator + entry.Name + Separator + DateOf(entry) : entry.UserId + Separator + entry.Name);
         }
 
         private void Save()

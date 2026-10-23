@@ -18,6 +18,8 @@ namespace PeakSentinel.Ui
         private const float ScrollSensitivity = 40f;
         private const float MinScrollHeight = 80f;
         private const float SearchInset = 12f;
+        private const float TrackInset = 7f;
+        private const float KnobWidth = 18f;
 
         private readonly CardSprites _sprites = new CardSprites();
         private readonly FaceSprites _faces = new FaceSprites();
@@ -237,6 +239,43 @@ namespace PeakSentinel.Ui
             return input;
         }
 
+        public Slider Slider(Transform parent, float width, UnityAction<float> onChange)
+        {
+            RectTransform element = Element("Slider", parent);
+            Fixed(element, width, BoxSize);
+
+            if (width <= 0f)
+                Flexible(element, 1f, 0f);
+
+            RectTransform track = Element("Track", element);
+            Inset(track, TrackInset);
+            Sliced(track.gameObject, _sprites.SliderTrack).raycastTarget = false;
+
+            RectTransform fillArea = Element("FillArea", element);
+            Inset(fillArea, TrackInset);
+            RectTransform fill = Element("Fill", fillArea);
+            Stretch(fill);
+            Sliced(fill.gameObject, _sprites.SliderFill).raycastTarget = false;
+
+            RectTransform handleArea = Element("HandleArea", element);
+            Stretch(handleArea);
+            handleArea.offsetMin = new Vector2(KnobWidth / 2f, 0f);
+            handleArea.offsetMax = new Vector2(-KnobWidth / 2f, 0f);
+            RectTransform handle = Element("Handle", handleArea);
+            handle.anchorMin = Vector2.zero;
+            handle.anchorMax = Vector2.up;
+            handle.sizeDelta = new Vector2(KnobWidth, 0f);
+            Image knob = Sliced(handle.gameObject, _sprites.Box);
+
+            Slider slider = element.gameObject.AddComponent<Slider>();
+            slider.fillRect = fill;
+            slider.handleRect = handle;
+            slider.direction = UnityEngine.UI.Slider.Direction.LeftToRight;
+            SpriteSwap(slider, knob, _sprites.CardHover, _sprites.CardHover);
+            slider.onValueChanged.AddListener(onChange);
+            return slider;
+        }
+
         public Image Icon(Transform parent, Sprite sprite, float size)
         {
             RectTransform element = Element("Icon", parent);
@@ -303,6 +342,13 @@ namespace PeakSentinel.Ui
             scrollbar.targetGraphic = handleImage;
             scrollbar.navigation = new Navigation { mode = Navigation.Mode.None };
             return scrollbar;
+        }
+
+        private void Inset(RectTransform element, float vertical)
+        {
+            Stretch(element);
+            element.offsetMin = new Vector2(0f, vertical);
+            element.offsetMax = new Vector2(0f, -vertical);
         }
 
         private TextMeshProUGUI SingleLine(TextMeshProUGUI label)

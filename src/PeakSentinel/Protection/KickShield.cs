@@ -12,6 +12,9 @@ namespace PeakSentinel.Protection
 {
     public sealed class KickShield : IRpcAudit
     {
+        private const string KickTag = "kicks while kicks are off";
+        private const string OffKickAction = "kicked while kicks are off in this run";
+
         private static readonly HashSet<string> Methods = new HashSet<string> { RpcNames.Kick, RpcNames.Fall, RpcNames.ForceAtPosition }; // Static: a vanilla kick and the RPCs it sends to the victim
 
         private readonly KickClock _kicks;
@@ -82,8 +85,13 @@ namespace PeakSentinel.Protection
 
         private void NoteKick(PhotonPlayer sender)
         {
-            if (!IsKickMode())
-                _report.Flag(sender, FindingCategory.Other, "kicked while kicks are off in this run", ShieldsEveryone());
+            if (IsKickMode())
+                return;
+
+            if (ShieldsEveryone())
+                _report.Recover(sender, FindingCategory.Other, KickTag, $"{OffKickAction}, the victim is stood back up for everyone");
+            else
+                _report.Flag(sender, FindingCategory.Other, OffKickAction);
         }
 
         private bool ShieldsEveryone()

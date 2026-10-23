@@ -188,7 +188,7 @@ namespace PeakSentinel.Detection
             Add(rules, RpcNames.AngerBees, typeof(BeeSwarm), Sender.Host, "changed a bee swarm's anger");
             Add(rules, RpcNames.TriggerHelicopter, typeof(Flare), Sender.Host, "triggered the rescue helicopter");
             Add(rules, RpcNames.LightFlare, typeof(Flare), Sender.Owner, "lit the flare of", true);
-            Add(rules, RpcNames.ExtinguishCampfire, typeof(Campfire), Sender.Host, "tried to extinguish a campfire");
+            Add(rules, RpcNames.ExtinguishCampfire, typeof(Campfire), Sender.Owner, "tried to extinguish a campfire"); // Owner: a placed portable stove is a player-owned Campfire that its owner puts out when it burns down
             Add(rules, RpcNames.EndGame, typeof(Character), Sender.Host, "forced the game to end");
             Add(rules, RpcNames.ForceWin, typeof(Character), Sender.Host, "forced a win");
             Add(rules, RpcNames.InitGhost, typeof(PlayerGhost), Sender.Owner, "took over the ghost of", true);

@@ -3,6 +3,12 @@
 ## Next
 
 - Cross-play: the Players tab shows which platform each player is on (PC, Mac, PlayStation, Xbox, Switch, Android, iOS) with an icon.
+- The Bans tab shows when each player was banned. Older bans show "ban date unknown"; shared ban lists keep their dates.
+- A kick while kicks are off is logged as RECOVERED (blue shield) instead of BLOCKED when Sentinel stands the victim up for everyone: the kick itself still lands. Same on the host and on a client.
+- No more "everyone knocked one player down" suspicions: some vanilla mechanics (the frog tongue, the rescue hook pulling its user) make every player's game send the same fall. A fall that your own game also sent to the same player within a second is not a finding.
+- Kicks are more reliable: a cheat mod user caught right after joining was not kicked (the game's kick failed because the player was not fully loaded yet). Now every kick (cheat mods, bans, host thieves, the Kick button) works for a player who just joined and is repeated every 5 s while the player is still in the room.
+- A portable stove burning down is no longer reported as "tried to extinguish a campfire": its owner's game puts it out by itself. Campfires on the map are still host-only.
+- Players tab: a player's profile has a voice volume slider (0–200%). It is the same volume as the game's slider in the Esc menu.
 
 ## 1.1.2
 

@@ -17,18 +17,22 @@ namespace PeakSentinel.Ui
         private const string MuteLabel = "Mute";
         private const string UnmuteLabel = "Unmute";
         private const string MutedBy = "by you";
+        private const string PercentFormat = "{0}%";
+        private const float PercentScale = 200f;
 
         private readonly MuteList _mutes;
         private readonly BanGuard _banGuard;
+        private readonly PlayerKicker _kicker;
         private readonly AvatarCache _avatars;
         private readonly Action _changed;
         private int _kickArmedActor;
         private int _banArmedActor;
 
-        public PlayerActions(MuteList mutes, BanGuard banGuard, AvatarCache avatars, Action changed)
+        public PlayerActions(MuteList mutes, BanGuard banGuard, PlayerKicker kicker, AvatarCache avatars, Action changed)
         {
             _mutes = mutes;
             _banGuard = banGuard;
+            _kicker = kicker;
             _avatars = avatars;
             _changed = changed;
         }
@@ -60,6 +64,25 @@ namespace PeakSentinel.Ui
             return _banArmedActor == actor ? ConfirmBanLabel : BanLabel;
         }
 
+        public float VoiceLevelOf(PhotonPlayer player)
+        {
+            return AudioLevels.GetPlayerLevel(player.UserId);
+        }
+
+        public string VoicePercentOf(float level)
+        {
+            return string.Format(PercentFormat, Mathf.RoundToInt(level * PercentScale));
+        }
+
+        // SAVE NOTE: the level lives in vanilla AudioLevels for the session only; LOAD: file by Steam ID → SetPlayerLevel on join; SAVE: here
+        public void SetVoiceLevel(PhotonPlayer player, float level)
+        {
+            if (player == null)
+                return;
+
+            AudioLevels.SetPlayerLevel(player.UserId, level);
+        }
+
         public void SwitchMute(PhotonPlayer player)
         {
             if (player == null)
@@ -86,7 +109,7 @@ namespace PeakSentinel.Ui
             }
 
             _kickArmedActor = 0;
-            PlayerHandler.Kick(player.ActorNumber);
+            _kicker.Kick(player);
             _changed();
         }
 

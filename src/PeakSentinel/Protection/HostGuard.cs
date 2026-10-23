@@ -14,13 +14,15 @@ namespace PeakSentinel.Protection
 
         private SuspicionReport _report;
         private OtherSettings _settings;
+        private PlayerKicker _kicker;
         private int _master;
-        private int _thiefToKick;
+        private PhotonPlayer _thiefToKick;
 
-        public void Initialize(SuspicionReport report, OtherSettings settings)
+        public void Initialize(SuspicionReport report, OtherSettings settings, PlayerKicker kicker)
         {
             _report = report;
             _settings = settings;
+            _kicker = kicker;
         }
 
         private void OnEnable()
@@ -36,10 +38,10 @@ namespace PeakSentinel.Protection
 
         private void Update()
         {
-            if (_thiefToKick != 0 && PhotonNetwork.IsMasterClient)
+            if (_thiefToKick != null && PhotonNetwork.IsMasterClient)
             {
-                PlayerHandler.Kick(_thiefToKick);
-                _thiefToKick = 0;
+                _kicker.Kick(_thiefToKick);
+                _thiefToKick = null;
             }
 
             _master = PhotonNetwork.InRoom && PhotonNetwork.MasterClient != null ? PhotonNetwork.MasterClient.ActorNumber : 0;
@@ -68,7 +70,7 @@ namespace PeakSentinel.Protection
             PhotonNetwork.SetMasterClient(PhotonNetwork.LocalPlayer);
 
             if (_settings.KickHostThieves.Value)
-                _thiefToKick = thief.ActorNumber;
+                _thiefToKick = thief;
         }
     }
 }

@@ -13,6 +13,7 @@ namespace PeakSentinel.Ui
         private const float BoxRadius = 8f;
         private const float MarkRadius = 6f;
         private const float BarRadius = 6f;
+        private const float SliderRadius = 3f;
         private const float PanelOutline = 2.5f;
         private const float CardOutline = 1.5f;
         private const float InnerShare = 0.6f;
@@ -30,6 +31,8 @@ namespace PeakSentinel.Ui
             Mark = Create(MarkRadius, 0f, UiPalette.Ink);
             BarBackground = Create(BarRadius, 0f, UiPalette.BarBackground);
             BarHandle = Create(BarRadius, 0f, UiPalette.BarHandle);
+            SliderTrack = Create(SliderRadius, CardOutline, UiPalette.BarBackground);
+            SliderFill = Create(SliderRadius, CardOutline, UiPalette.BarHandle);
         }
 
         public Sprite Panel { get; }
@@ -42,6 +45,8 @@ namespace PeakSentinel.Ui
         public Sprite Mark { get; }
         public Sprite BarBackground { get; }
         public Sprite BarHandle { get; }
+        public Sprite SliderTrack { get; }
+        public Sprite SliderFill { get; }
 
         private Sprite Create(float radius, float outline, Color fill)
         {

@@ -8,7 +8,7 @@ namespace PeakSentinel.Ui
 {
     public sealed class WindowServices
     {
-        public WindowServices(FindingLog findings, SuspicionReport report, BanList bans, BanGuard banGuard, MuteList mutes, ReportExport export, LatencyMeter latency, DesyncFixer desync, SentinelPresence presence, LootLedger loot, TrueAscentState ascent, SpeedrunMonitor speedrun)
+        public WindowServices(FindingLog findings, SuspicionReport report, BanList bans, BanGuard banGuard, PlayerKicker kicker, MuteList mutes, ReportExport export, LatencyMeter latency, DesyncFixer desync, SentinelPresence presence, LootLedger loot, TrueAscentState ascent, SpeedrunMonitor speedrun)
         {
             Speedrun = speedrun;
             Ascent = ascent;
@@ -17,6 +17,7 @@ namespace PeakSentinel.Ui
             Report = report;
             Bans = bans;
             BanGuard = banGuard;
+            Kicker = kicker;
             Mutes = mutes;
             Export = export;
             Latency = latency;
@@ -28,6 +29,7 @@ namespace PeakSentinel.Ui
         public SuspicionReport Report { get; }
         public BanList Bans { get; }
         public BanGuard BanGuard { get; }
+        public PlayerKicker Kicker { get; }
         public MuteList Mutes { get; }
         public ReportExport Export { get; }
         public LatencyMeter Latency { get; }

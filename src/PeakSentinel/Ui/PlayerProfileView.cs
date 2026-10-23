@@ -20,6 +20,8 @@ namespace PeakSentinel.Ui
         private const string LeftRoom = "left the room";
         private const string NoIssues = "no issues";
         private const string DroppedFormat = "   · muted, {0} packets ignored";
+        private const string VoiceLabel = "Voice volume";
+        private const float VolumeWidth = 360f;
 
         private readonly UiFactory _ui;
         private readonly FindingLog _findings;
@@ -33,6 +35,9 @@ namespace PeakSentinel.Ui
         private readonly (Button Button, TextMeshProUGUI Label) _mute;
         private readonly (Button Button, TextMeshProUGUI Label) _kick;
         private readonly (Button Button, TextMeshProUGUI Label) _ban;
+        private readonly RectTransform _voice;
+        private readonly Slider _volume;
+        private readonly TextMeshProUGUI _percent;
         private readonly FindingFeed _feed;
         private string _title;
 
@@ -54,6 +59,10 @@ namespace PeakSentinel.Ui
             _mute = ui.Button(header, string.Empty, ButtonWidth, ButtonSize, () => actions.SwitchMute(actions.Find(Actor)));
             _kick = ui.Button(header, string.Empty, ButtonWidth, ButtonSize, () => actions.Kick(actions.Find(Actor)));
             _ban = ui.Button(header, string.Empty, ButtonWidth, ButtonSize, () => actions.Ban(actions.Find(Actor)));
+            _voice = ui.Row(root, 10f);
+            ui.Label(_voice, VoiceLabel, LineSize, UiPalette.Text, false);
+            _volume = ui.Slider(_voice, VolumeWidth, OnVolumeChanged);
+            _percent = ui.Label(_voice, string.Empty, LineSize, UiPalette.Notice, false);
             RectTransform status = ui.Row(root, 8f);
             _face = ui.Icon(status, ui.Faces.Clean, FaceSize);
             _problems = ui.Label(status, string.Empty, LineSize, UiPalette.Clean, false);
@@ -109,10 +118,27 @@ namespace PeakSentinel.Ui
                 _ban.Button.gameObject.SetActive(false);
             }
 
+            if (player != null && !player.IsLocal)
+            {
+                _voice.gameObject.SetActive(true);
+                _volume.SetValueWithoutNotify(_actions.VoiceLevelOf(player));
+                _percent.text = _actions.VoicePercentOf(_volume.value);
+            }
+            else
+            {
+                _voice.gameObject.SetActive(false);
+            }
+
             if (player != null)
                 _actions.ShowAvatar(_avatar, player);
 
             _feed.Show(_findings, _filter);
+        }
+
+        private void OnVolumeChanged(float level)
+        {
+            _actions.SetVoiceLevel(_actions.Find(Actor), level);
+            _percent.text = _actions.VoicePercentOf(level);
         }
     }
 }

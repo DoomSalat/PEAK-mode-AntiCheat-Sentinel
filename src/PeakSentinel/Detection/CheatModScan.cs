@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using PeakSentinel.Protection;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
 using Photon.Pun;
@@ -28,13 +29,15 @@ namespace PeakSentinel.Detection
         private readonly HashSet<(int Actor, string Key)> _reported = new HashSet<(int Actor, string Key)>();
         private SuspicionReport _report;
         private DetectionSettings _detection;
+        private PlayerKicker _kicker;
         private string _room;
         private float _nextScan;
 
-        public void Initialize(SuspicionReport report, DetectionSettings detection)
+        public void Initialize(SuspicionReport report, DetectionSettings detection, PlayerKicker kicker)
         {
             _report = report;
             _detection = detection;
+            _kicker = kicker;
         }
 
         private void Update()
@@ -73,7 +76,7 @@ namespace PeakSentinel.Detection
 
                 if (kick)
                 {
-                    PlayerHandler.Kick(player.ActorNumber);
+                    _kicker.Kick(player);
                     return;
                 }
             }

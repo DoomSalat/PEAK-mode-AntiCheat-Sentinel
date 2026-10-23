@@ -46,7 +46,7 @@ namespace PeakSentinel.Ui
         {
             _ui = ui;
             _services = services;
-            _actions = new PlayerActions(services.Mutes, services.BanGuard, avatars, Refresh);
+            _actions = new PlayerActions(services.Mutes, services.BanGuard, services.Kicker, avatars, Refresh);
 
             (ScrollRect scroll, RectTransform rows) = ui.Scroll(parent, 8f);
             _list = scroll.gameObject;
@@ -96,8 +96,11 @@ namespace PeakSentinel.Ui
             string name = PlayerNames.Name(player);
             int actor = player.ActorNumber;
             Button row = _ui.RowButton(_rows, () => OpenProfile(actor, name));
-            _actions.ShowAvatar(_ui.Icon(row.transform, _ui.Sprites.Box, AvatarSize), player);
-            RectTransform text = _ui.Column(row.transform, 2f, new RectOffset(0, 0, 0, 0));
+            RectTransform card = _ui.Column(row.transform, 6f, new RectOffset(0, 0, 0, 0));
+            _ui.Flexible(card, 1f, 0f);
+            RectTransform top = _ui.Row(card, 8f);
+            _actions.ShowAvatar(_ui.Icon(top, _ui.Sprites.Box, AvatarSize), player);
+            RectTransform text = _ui.Column(top, 2f, new RectOffset(0, 0, 0, 0));
             _ui.Flexible(text, 1f, 0f);
             _ui.Label(text, $"{name}{(player.IsLocal ? YouLabel : string.Empty)}{(player.IsMasterClient ? HostLabel : string.Empty)}   #{actor}", NameSize, UiPalette.Text, false);
             PlayerStanding standing = findings.StandingOf(actor);
@@ -109,14 +112,14 @@ namespace PeakSentinel.Ui
 
             AddPlatform(status, PlayerPlatforms.FamilyOf(player));
 
-            bool muted = _actions.IsMuted(player);
-            _ui.Flexible(_ui.Label(status, (findings.ProblemsOf(actor) ?? NoIssues) + (muted ? RichText.Warning(MutedNote) : string.Empty), LineSize, _actions.ColorOf(standing), true), 1f, 0f);
-
-            RectTransform side = _ui.Column(row.transform, 4f, new RectOffset(0, 0, 0, 0));
+            RectTransform side = _ui.Column(top, 4f, new RectOffset(0, 0, 0, 0));
             AddButtons(_ui.Row(side, 8f), player);
             TextMeshProUGUI ping = _ui.Label(side, string.Empty, PingSize, UiPalette.Notice, true);
             ping.alignment = TextAlignmentOptions.BottomRight;
             ping.textWrappingMode = TextWrappingModes.NoWrap;
+
+            bool muted = _actions.IsMuted(player);
+            _ui.Label(card, (findings.ProblemsOf(actor) ?? NoIssues) + (muted ? RichText.Warning(MutedNote) : string.Empty), LineSize, _actions.ColorOf(standing), true);
             _pings[actor] = ping;
         }
 

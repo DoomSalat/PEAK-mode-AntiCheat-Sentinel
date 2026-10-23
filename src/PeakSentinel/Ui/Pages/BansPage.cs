@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 using PeakSentinel.Protection;
 using PeakSentinel.Reporting;
@@ -21,6 +20,8 @@ namespace PeakSentinel.Ui.Pages
         private const string PasteLabel = "Add from clipboard";
         private const string CopiedFormat = "Copied {0} bans to the clipboard: send them to a friend, they press 'Add from clipboard'";
         private const string AddedFormat = "Added {0} new bans from the clipboard";
+        private const string BannedFormat = "banned {0}";
+        private const string UnknownDate = "ban date unknown";
 
         private readonly UiFactory _ui;
         private readonly BanList _bans;
@@ -46,7 +47,7 @@ namespace PeakSentinel.Ui.Pages
 
         public void Refresh()
         {
-            string signature = string.Join("|", _bans.Entries.Select(entry => entry.Key));
+            string signature = string.Join("|", _bans.Entries.Select(entry => entry.UserId));
 
             if (signature == _shown)
                 return;
@@ -60,16 +61,18 @@ namespace PeakSentinel.Ui.Pages
             if (_bans.Count == 0)
                 _ui.Label(_rows, NoBans, LineSize, UiPalette.Notice, false);
 
-            foreach (KeyValuePair<string, string> entry in _bans.Entries.ToList())
-                AddRow(entry.Key, entry.Value);
+            foreach (BanEntry entry in _bans.Entries.ToList())
+                AddRow(entry);
         }
 
-        private void AddRow(string userId, string name)
+        private void AddRow(BanEntry entry)
         {
+            string date = _bans.DateOf(entry);
             RectTransform row = _ui.Row(_rows, 10f);
-            TextMeshProUGUI label = _ui.Label(row, $"{name}   ({userId})", LineSize, UiPalette.Cheat, false);
+            TextMeshProUGUI label = _ui.Label(row, $"{entry.Name}   ({entry.UserId})", LineSize, UiPalette.Cheat, false);
             _ui.Flexible(label, 1f, 0f);
-            _ui.Button(row, UnbanLabel, UnbanWidth, LineSize, () => Unban(userId));
+            _ui.Label(row, date == null ? UnknownDate : string.Format(BannedFormat, date), LineSize, UiPalette.Notice, false);
+            _ui.Button(row, UnbanLabel, UnbanWidth, LineSize, () => Unban(entry.UserId));
         }
 
         private void CopyList()

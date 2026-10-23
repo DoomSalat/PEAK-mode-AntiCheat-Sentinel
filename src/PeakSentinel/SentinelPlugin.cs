@@ -117,14 +117,15 @@ namespace PeakSentinel
         private WindowServices Watch(GameObject host, SentinelSettings settings, SuspicionReport report, FindingLog findings, MuteList mutes, LatencyMeter latency, StateLedger ledger, SpawnClock spawns, TrueAscentState ascent)
         {
             BanList bans = new BanList(Path.Combine(Paths.ConfigPath, BansFile));
-            host.AddComponent<HostGuard>().Initialize(report, settings.Other);
+            PlayerKicker kicker = host.AddComponent<PlayerKicker>();
+            host.AddComponent<HostGuard>().Initialize(report, settings.Other, kicker);
             SentinelPresence presence = host.AddComponent<SentinelPresence>();
             presence.Initialize(report, Version);
             DesyncFixer desync = host.AddComponent<DesyncFixer>();
             desync.Initialize(report, settings.Other, ledger);
             BanGuard banGuard = host.AddComponent<BanGuard>();
-            banGuard.Initialize(report, bans, mutes);
-            host.AddComponent<CheatModScan>().Initialize(report, settings.Detection);
+            banGuard.Initialize(report, bans, mutes, kicker);
+            host.AddComponent<CheatModScan>().Initialize(report, settings.Detection, kicker);
             host.AddComponent<IdentityAudit>().Initialize(report, settings.Detection);
             SentinelHooks.Invisibility = new InvisibilityAudit(report, settings.Detection);
             SentinelHooks.BodySync = new BodySyncGuard(report);
@@ -136,7 +137,7 @@ namespace PeakSentinel
             SentinelHooks.Loot = loot;
             SpeedrunMonitor speedrun = host.AddComponent<SpeedrunMonitor>();
             speedrun.Initialize(settings.Speedrun, report, loot, new RunJournal(Paths.BepInExRootPath, settings.Speedrun.RecordRun), flight, stamina);
-            return new WindowServices(findings, report, bans, banGuard, mutes, new ReportExport(Paths.BepInExRootPath, findings), latency, desync, presence, loot, ascent, speedrun);
+            return new WindowServices(findings, report, bans, banGuard, kicker, mutes, new ReportExport(Paths.BepInExRootPath, findings), latency, desync, presence, loot, ascent, speedrun);
         }
 
         private void OpenWindow(GameObject host, SentinelSettings settings, WindowServices services)
