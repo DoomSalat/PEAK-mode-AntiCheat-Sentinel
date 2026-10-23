@@ -71,14 +71,17 @@ namespace PeakSentinel.Detection
                 if (!player.CustomProperties.ContainsKey(key) || !_reported.Add((player.ActorNumber, key)))
                     continue;
 
-                bool kick = _detection.KickCheatModUsers.Value && PhotonNetwork.IsMasterClient;
-                _report.Refuse(player, FindingCategory.Cheats, tag, kick ? $"is a {tag}, kicked" : $"is a {tag}", kick);
+                string action = $"is a {tag}";
 
-                if (kick)
+                if (!_detection.KickCheatModUsers.Value || !PhotonNetwork.IsMasterClient)
                 {
-                    _kicker.Kick(player);
-                    return;
+                    _report.Refuse(player, FindingCategory.Cheats, tag, action, false);
+                    continue;
                 }
+
+                _report.Kick(player, FindingCategory.Cheats, tag, action);
+                _kicker.Kick(player);
+                return;
             }
 
             foreach ((string key, string tag) in ConsoleMarkers)

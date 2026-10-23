@@ -1,6 +1,6 @@
 # Changelog
 
-## Next
+## 1.1.2
 
 - Cross-play: the Players tab shows which platform each player is on (PC, Mac, PlayStation, Xbox, Switch, Android, iOS) with an icon.
 - The Bans tab shows when each player was banned. Older bans show "ban date unknown"; shared ban lists keep their dates.
@@ -8,10 +8,11 @@
 - No more "everyone knocked one player down" suspicions: some vanilla mechanics (the frog tongue, the rescue hook pulling its user) make every player's game send the same fall. A fall that your own game also sent to the same player within a second is not a finding.
 - Kicks are more reliable: a cheat mod user caught right after joining was not kicked (the game's kick failed because the player was not fully loaded yet). Now every kick (cheat mods, bans, host thieves, the Kick button) works for a player who just joined and is repeated every 5 s while the player is still in the room.
 - A portable stove burning down is no longer reported as "tried to extinguish a campfire": its owner's game puts it out by itself. Campfires on the map are still host-only.
+- RECOVERED instead of BLOCKED wherever the host undoes something that already happened: taking the host back, removing cheat-spawned items, balloons, character clones and extra shots for everyone, returning a flyer to the ground.
+- When Sentinel kicks someone (cheat mod users, banned players, host thieves) the finding says "kicked:" in blue instead of "blocked:". Kicking a host thief is now logged too.
+- Players tab: a player whose name keeps changing (animated nickname) or new findings no longer rebuild the list every moment, so its buttons stay usable. Names, status and findings update in place.
+- Name changes mid-game are one finding per player with a counter (x N) instead of a new line for every name.
 - Players tab: a player's profile has a voice volume slider (0–200%). It is the same volume as the game's slider in the Esc menu.
-
-## 1.1.2
-
 - More crash protection: broken run settings (also when a client asks the host to start the run), broken map item data and NaN or infinite body positions are always refused. Hiding the map's loose items is now host-only.
 - Invisibility (Admin_menukz) is now really undone: the invisible player's body is moved to where they stand. In 1.1.1 it was only reported.
 

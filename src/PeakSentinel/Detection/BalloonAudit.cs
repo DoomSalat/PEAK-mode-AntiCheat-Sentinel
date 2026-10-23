@@ -99,7 +99,7 @@ namespace PeakSentinel.Detection
                 return _report.Refuse(call.Sender, FindingCategory.Cheats, tag, action, false);
 
             _objects.RemoveForEveryone(balloon.gameObject, call.Sender);
-            return _report.Refuse(call.Sender, FindingCategory.Cheats, tag, $"{action}, removed for everyone", true);
+            return _report.Recover(call.Sender, FindingCategory.Cheats, tag, $"{action}, removed for everyone");
         }
 
         private bool Overtied(PhotonPlayer sender)

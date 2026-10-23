@@ -22,6 +22,8 @@ namespace PeakSentinel.Reporting
         private const string LocalBlockPrefix = "blocked in your game only (you are not the host): ";
         private const string RecoveredLevel = "RECOVERED";
         private const string RecoveredPrefix = "recovered: ";
+        private const string KickedLevel = "KICKED";
+        private const string KickedPrefix = "kicked: ";
         private const string FixLevel = "FIX";
         private const string FixPrefix = "fix: ";
         private const string UnsureNote = " (heuristic, may be wrong)";
@@ -60,8 +62,19 @@ namespace PeakSentinel.Reporting
         public bool Recover(PhotonPlayer culprit, FindingCategory category, string tag, string action)
         {
             Tag(culprit, tag);
-            Report(culprit, category, action, FindingKind.Recovered, null, RecoveredPrefix);
+            return Recover(culprit, category, action);
+        }
+
+        public bool Recover(PhotonPlayer culprit, FindingCategory category, string action, bool unsure = false)
+        {
+            Report(culprit, category, unsure ? action + UnsureNote : action, FindingKind.Recovered, null, RecoveredPrefix);
             return false;
+        }
+
+        public void Kick(PhotonPlayer culprit, FindingCategory category, string tag, string action)
+        {
+            Tag(culprit, tag);
+            Report(culprit, category, action, FindingKind.Kicked, null, KickedPrefix);
         }
 
         public bool Refuse(PhotonPlayer culprit, FindingCategory category, string tag, string action, bool block, Repair repair = null)
@@ -127,6 +140,9 @@ namespace PeakSentinel.Reporting
 
                 case FindingKind.Recovered:
                     return RecoveredLevel;
+
+                case FindingKind.Kicked:
+                    return KickedLevel;
 
                 case FindingKind.Cheat:
                     return CheatLevel;

@@ -126,10 +126,16 @@ namespace PeakSentinel.Detection.Flight
         {
             bool snapBack = _detection.BlockFlight.Value && PhotonNetwork.IsMasterClient && track.LastGround.HasValue && !character.IsLocal;
             _report.Tag(character.photonView.Owner, FliesTag);
-            _report.Suspect(character.photonView.Owner, FindingCategory.Cheats, snapBack ? action + ", returned to the ground" : action, snapBack);
 
             if (snapBack)
+            {
+                _report.Recover(character.photonView.Owner, FindingCategory.Cheats, action + ", returned to the ground", true);
                 SnapBack(character, track);
+            }
+            else
+            {
+                _report.Suspect(character.photonView.Owner, FindingCategory.Cheats, action);
+            }
         }
 
         private void SnapBack(Character character, FlightTrack track)

@@ -94,7 +94,7 @@ namespace PeakSentinel.Ui
             PhotonPlayer player = _actions.Find(Actor);
             bool muted = _actions.IsMuted(player);
             PlayerStanding standing = _findings.StandingOf(Actor);
-            _name.text = $"{_title}   #{Actor}" + (player == null ? $" — {LeftRoom}" : string.Empty);
+            _name.text = player == null ? $"{_title}   #{Actor} — {LeftRoom}" : $"{PlayerNames.Name(player)}   #{Actor}";
             _problems.text = (_findings.ProblemsOf(Actor) ?? NoIssues) + (muted ? RichText.Warning(string.Format(DroppedFormat, _actions.DroppedFrom(player))) : string.Empty);
             _problems.color = _actions.ColorOf(standing);
             _face.sprite = _ui.Faces.Of(standing);

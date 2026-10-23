@@ -33,14 +33,14 @@ namespace PeakSentinel.Ui
         private const string MutedNote = "   · muted";
 
         private readonly StringBuilder _signature = new StringBuilder();
-        private readonly Dictionary<int, TextMeshProUGUI> _pings = new Dictionary<int, TextMeshProUGUI>();
+        private readonly Dictionary<int, PlayerRow> _rowViews = new Dictionary<int, PlayerRow>();
         private readonly UiFactory _ui;
         private readonly WindowServices _services;
         private readonly PlayerActions _actions;
         private readonly PlayerProfileView _profile;
         private readonly GameObject _list;
         private readonly RectTransform _rows;
-        private string _shownRows;
+        private string _shownSignature;
 
         public PlayerListView(UiFactory ui, Transform parent, FeedFilter filter, WindowServices services, AvatarCache avatars, Action<FindingLog.Finding> fix)
         {
@@ -66,14 +66,14 @@ namespace PeakSentinel.Ui
         {
             string signature = ListSignature();
 
-            if (signature == _shownRows)
+            if (signature == _shownSignature)
             {
-                ShowPings();
+                ShowRows();
                 return;
             }
 
-            _shownRows = signature;
-            _pings.Clear();
+            _shownSignature = signature;
+            _rowViews.Clear();
 
             for (int i = _rows.childCount - 1; i >= 0; i--)
                 UnityEngine.Object.Destroy(_rows.GetChild(i).gameObject);
@@ -87,25 +87,22 @@ namespace PeakSentinel.Ui
             foreach (PhotonPlayer player in PhotonNetwork.PlayerList)
                 AddRow(player);
 
-            ShowPings();
+            ShowRows();
         }
 
         private void AddRow(PhotonPlayer player)
         {
-            FindingLog findings = _services.Findings;
-            string name = PlayerNames.Name(player);
             int actor = player.ActorNumber;
-            Button row = _ui.RowButton(_rows, () => OpenProfile(actor, name));
+            Button row = _ui.RowButton(_rows, () => OpenProfile(actor));
             RectTransform card = _ui.Column(row.transform, 6f, new RectOffset(0, 0, 0, 0));
             _ui.Flexible(card, 1f, 0f);
             RectTransform top = _ui.Row(card, 8f);
             _actions.ShowAvatar(_ui.Icon(top, _ui.Sprites.Box, AvatarSize), player);
             RectTransform text = _ui.Column(top, 2f, new RectOffset(0, 0, 0, 0));
             _ui.Flexible(text, 1f, 0f);
-            _ui.Label(text, $"{name}{(player.IsLocal ? YouLabel : string.Empty)}{(player.IsMasterClient ? HostLabel : string.Empty)}   #{actor}", NameSize, UiPalette.Text, false);
-            PlayerStanding standing = findings.StandingOf(actor);
+            TextMeshProUGUI name = _ui.Label(text, string.Empty, NameSize, UiPalette.Text, false);
             RectTransform status = _ui.Row(text, 8f);
-            _ui.Icon(status, _ui.Faces.Of(standing), FaceSize);
+            Image face = _ui.Icon(status, _ui.Faces.Clean, FaceSize);
 
             if (_services.Presence.Runs(player))
                 _ui.Icon(status, _ui.Shield, FaceSize);
@@ -118,9 +115,30 @@ namespace PeakSentinel.Ui
             ping.alignment = TextAlignmentOptions.BottomRight;
             ping.textWrappingMode = TextWrappingModes.NoWrap;
 
-            bool muted = _actions.IsMuted(player);
-            _ui.Label(card, (findings.ProblemsOf(actor) ?? NoIssues) + (muted ? RichText.Warning(MutedNote) : string.Empty), LineSize, _actions.ColorOf(standing), true);
-            _pings[actor] = ping;
+            TextMeshProUGUI problems = _ui.Label(card, string.Empty, LineSize, UiPalette.Clean, true);
+            _rowViews[actor] = new PlayerRow(name, face, problems, ping);
+        }
+
+        private void ShowRows()
+        {
+            FindingLog findings = _services.Findings;
+
+            foreach (KeyValuePair<int, PlayerRow> entry in _rowViews)
+            {
+                PhotonPlayer player = _actions.Find(entry.Key);
+
+                if (player == null)
+                    continue;
+
+                PlayerRow row = entry.Value;
+                PlayerStanding standing = findings.StandingOf(entry.Key);
+                row.Name.text = $"{PlayerNames.Name(player)}{(player.IsLocal ? YouLabel : string.Empty)}{(player.IsMasterClient ? HostLabel : string.Empty)}   #{entry.Key}";
+                row.Face.sprite = _ui.Faces.Of(standing);
+                row.Problems.text = (findings.ProblemsOf(entry.Key) ?? NoIssues) + (_actions.IsMuted(player) ? RichText.Warning(MutedNote) : string.Empty);
+                row.Problems.color = _actions.ColorOf(standing);
+                int? ping = player.IsLocal ? PhotonNetwork.GetPing() : _services.Latency.PingOf(entry.Key);
+                row.Ping.text = ping.HasValue ? RichText.Paint(string.Format(PingFormat, ping.Value), PingColor(ping.Value)) : NoPing;
+            }
         }
 
         private void AddPlatform(Transform status, PlatformUtility.PlatformFamily family)
@@ -157,16 +175,6 @@ namespace PeakSentinel.Ui
             _ui.Button(buttons, _actions.BanLabelOf(actor), ButtonWidth, ButtonSize, () => _actions.Ban(player));
         }
 
-        private void ShowPings()
-        {
-            foreach (KeyValuePair<int, TextMeshProUGUI> entry in _pings)
-            {
-                PhotonPlayer player = _actions.Find(entry.Key);
-                int? ping = player != null && player.IsLocal ? PhotonNetwork.GetPing() : _services.Latency.PingOf(entry.Key);
-                entry.Value.text = ping.HasValue ? RichText.Paint(string.Format(PingFormat, ping.Value), PingColor(ping.Value)) : NoPing;
-            }
-        }
-
         private Color PingColor(int ping)
         {
             if (ping <= GoodPing)
@@ -178,27 +186,27 @@ namespace PeakSentinel.Ui
         private string ListSignature()
         {
             _signature.Clear();
-            _signature.Append(PhotonNetwork.InRoom).Append(PhotonNetwork.IsMasterClient).Append(_services.Findings.Version).Append('|').Append(_actions.State);
+            _signature.Append(PhotonNetwork.InRoom).Append(PhotonNetwork.IsMasterClient).Append('|').Append(_actions.State);
 
             if (!PhotonNetwork.InRoom)
                 return _signature.ToString();
 
             foreach (PhotonPlayer player in PhotonNetwork.PlayerList)
-                _signature.Append('|').Append(player.ActorNumber).Append(player.NickName).Append(player.IsMasterClient).Append(_services.Presence.Runs(player)).Append(PlayerPlatforms.FamilyOf(player));
+                _signature.Append('|').Append(player.ActorNumber).Append(player.IsMasterClient).Append(_services.Presence.Runs(player)).Append(PlayerPlatforms.FamilyOf(player));
 
             return _signature.ToString();
         }
 
-        private void OpenProfile(int actor, string name)
+        private void OpenProfile(int actor)
         {
             _list.SetActive(false);
-            _profile.Open(actor, name);
+            _profile.Open(actor, PlayerNames.Name(_actions.Find(actor)));
         }
 
         private void CloseProfile()
         {
             _profile.Close();
-            _shownRows = null;
+            _shownSignature = null;
             _list.SetActive(true);
             RefreshList();
         }

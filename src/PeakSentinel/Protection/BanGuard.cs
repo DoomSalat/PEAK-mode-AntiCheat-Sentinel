@@ -10,6 +10,7 @@ namespace PeakSentinel.Protection
         private const float ScanSeconds = 1f;
         private const string BannedTag = "banned";
         private const string MuteReason = "banned";
+        private const string BannedByYou = "was banned by you";
 
         private SuspicionReport _report;
         private BanList _bans;
@@ -48,16 +49,23 @@ namespace PeakSentinel.Protection
         public void Ban(PhotonPlayer player)
         {
             _bans.Ban(player.UserId, PlayerNames.Name(player));
-            _report.Tag(player, BannedTag);
-            _report.Flag(player, FindingCategory.Cheats, "was banned by you", true);
             _mutes.Mute(player, MuteReason);
-            _kicker.Kick(player);
+
+            if (PhotonNetwork.IsMasterClient)
+            {
+                _report.Kick(player, FindingCategory.Cheats, BannedTag, BannedByYou);
+                _kicker.Kick(player);
+            }
+            else
+            {
+                _report.Tag(player, BannedTag);
+                _report.Flag(player, FindingCategory.Cheats, BannedByYou, true);
+            }
         }
 
         private void Remove(PhotonPlayer player)
         {
-            _report.Tag(player, BannedTag);
-            _report.Flag(player, FindingCategory.Cheats, "is on your ban list, kicked", true);
+            _report.Kick(player, FindingCategory.Cheats, BannedTag, "is on your ban list");
             _kicker.Kick(player);
         }
     }

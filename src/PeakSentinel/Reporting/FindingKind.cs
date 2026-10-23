@@ -7,6 +7,7 @@ namespace PeakSentinel.Reporting
         Cheat,
         Blocked,
         Recovered,
+        Kicked,
         Fix,
     }
 }

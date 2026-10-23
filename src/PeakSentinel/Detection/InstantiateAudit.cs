@@ -16,6 +16,8 @@ namespace PeakSentinel.Detection
         private const string DangerousTag = "spawns dangerous objects";
         private const string UsesTag = "uses items without end";
         private const string CloneTag = "spawns copies of their character";
+        private const string CloneAction = "spawned a second copy of their character (cheat bots)";
+        private const string RemovedNote = ", removed for everyone";
         private const string CharacterPrefab = "Character";
         private const string AdminMenuBot = "AdminBot";
         private const string AdminMenuTag = "Admin_menukz user";
@@ -72,7 +74,13 @@ namespace PeakSentinel.Detection
             {
                 bool blockShot = _detection.BlockHarmToOthers.Value;
                 bool removeShot = blockShot && PhotonNetwork.IsMasterClient;
-                _report.Refuse(creator, FindingCategory.Cheats, UsesTag, $"fired '{shooter.GetItemName()}' more than its {shooter.totalUses} uses (endless uses cheat){(removeShot ? ", removed for everyone" : string.Empty)}", blockShot);
+                string shot = $"fired '{shooter.GetItemName()}' more than its {shooter.totalUses} uses (endless uses cheat)";
+
+                if (removeShot)
+                    _report.Recover(creator, FindingCategory.Cheats, UsesTag, shot + RemovedNote);
+                else
+                    _report.Refuse(creator, FindingCategory.Cheats, UsesTag, shot, blockShot);
+
                 _removeNext = removeShot;
                 return !blockShot || removeShot;
             }
@@ -82,8 +90,13 @@ namespace PeakSentinel.Detection
 
             bool block = _detection.BlockDangerousSpawns.Value;
             bool removeForAll = block && PhotonNetwork.IsMasterClient;
-            string action = removeForAll ? $"spawned '{prefab}' (only the host may spawn it), removed for everyone" : $"spawned '{prefab}' (only the host may spawn it)";
-            _report.Refuse(creator, FindingCategory.Cheats, DangerousTag, action, block);
+            string action = $"spawned '{prefab}' (only the host may spawn it)";
+
+            if (removeForAll)
+                _report.Recover(creator, FindingCategory.Cheats, DangerousTag, action + RemovedNote);
+            else
+                _report.Refuse(creator, FindingCategory.Cheats, DangerousTag, action, block);
+
             _removeNext = removeForAll;
             return !block || removeForAll;
         }
@@ -139,31 +152,37 @@ namespace PeakSentinel.Detection
 
             bool block = _protection.BlockCheatSpawns.Value && PhotonNetwork.IsMasterClient;
             _blame.Note(creator);
-            _report.Flag(creator, FindingCategory.Items, $"spawned '{item.GetItemName()}' out of nowhere (not in their inventory, nothing broken there)", block);
-
-            if (block)
-                _objects.RemoveForEveryone(created, creator);
+            ReportSpawn(creator, created, block, $"spawned '{item.GetItemName()}' out of nowhere (not in their inventory, nothing broken there)");
         }
 
         private bool RefuseClone(PhotonPlayer creator, int viewId)
         {
             bool removeForAll = PhotonNetwork.IsMasterClient && viewId != 0;
 
-            if (removeForAll)
-                _objects.RemoveForEveryone(viewId, creator);
+            if (!removeForAll)
+                return _report.Refuse(creator, FindingCategory.Cheats, CloneTag, CloneAction + ", always blocked", true);
 
-            _report.Refuse(creator, FindingCategory.Cheats, CloneTag, $"spawned a second copy of their character (cheat bots), always blocked{(removeForAll ? ", removed for everyone" : string.Empty)}", true);
-            return false;
+            _objects.RemoveForEveryone(viewId, creator);
+            return _report.Recover(creator, FindingCategory.Cheats, CloneTag, CloneAction + RemovedNote);
         }
 
         private void RemoveGiven(PhotonPlayer creator, GameObject created, Item item)
         {
             bool block = _protection.BlockCheatSpawns.Value && PhotonNetwork.IsMasterClient;
             _blame.Note(creator);
-            _report.Flag(creator, FindingCategory.Items, $"took out '{item.GetItemName()}' they gave themselves (the host refused it)", block);
+            ReportSpawn(creator, created, block, $"took out '{item.GetItemName()}' they gave themselves (the host refused it)");
+        }
 
-            if (block)
-                _objects.RemoveForEveryone(created, creator);
+        private void ReportSpawn(PhotonPlayer creator, GameObject created, bool remove, string action)
+        {
+            if (!remove)
+            {
+                _report.Flag(creator, FindingCategory.Items, action);
+                return;
+            }
+
+            _objects.RemoveForEveryone(created, creator);
+            _report.Recover(creator, FindingCategory.Items, action + RemovedNote);
         }
 
         private Item ShooterOf(PhotonPlayer creator, string prefab)

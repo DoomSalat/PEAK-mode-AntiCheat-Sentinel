@@ -15,11 +15,11 @@ namespace PeakSentinel.Detection
         private const string UserIdProperty = "UserID";
         private const string UnknownPersona = "[unknown]";
         private const string SpoofTag = "spoofs a name or Steam ID";
-        private const string RenameKey = "rename:";
         private const string SteamNameKey = "steam name:";
         private const string SteamIdKey = "steam id:";
 
         private readonly Dictionary<int, string> _firstNames = new Dictionary<int, string>();
+        private readonly Dictionary<int, string> _lastNames = new Dictionary<int, string>();
         private readonly HashSet<(int Actor, string Kind)> _reported = new HashSet<(int Actor, string Kind)>();
         private SuspicionReport _report;
         private DetectionSettings _detection;
@@ -43,6 +43,7 @@ namespace PeakSentinel.Detection
             {
                 _room = PhotonNetwork.CurrentRoom.Name;
                 _firstNames.Clear();
+                _lastNames.Clear();
                 _reported.Clear();
             }
 
@@ -69,11 +70,15 @@ namespace PeakSentinel.Detection
             if (!_firstNames.TryGetValue(player.ActorNumber, out string first))
             {
                 _firstNames[player.ActorNumber] = player.NickName;
+                _lastNames[player.ActorNumber] = player.NickName;
                 return;
             }
 
-            if (first != player.NickName && _reported.Add((player.ActorNumber, RenameKey + player.NickName)))
-                _report.Refuse(player, FindingCategory.Cheats, SpoofTag, $"changed their name mid-game from '{first}' to '{player.NickName}'", false);
+            if (_lastNames[player.ActorNumber] == player.NickName)
+                return;
+
+            _lastNames[player.ActorNumber] = player.NickName;
+            _report.Refuse(player, FindingCategory.Cheats, SpoofTag, $"changed their name mid-game (first seen as '{first}')", false);
         }
 
         private void CheckSteamName(PhotonPlayer player)
