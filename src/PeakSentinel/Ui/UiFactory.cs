@@ -24,6 +24,7 @@ namespace PeakSentinel.Ui
         private readonly ShieldSprite _shield = new ShieldSprite();
         private readonly DotSprite _dot = new DotSprite();
         private readonly CloverSprite _clover = new CloverSprite();
+        private readonly PlatformSprites _platforms = new PlatformSprites();
 
         public UiFactory(TMP_FontAsset font)
         {
@@ -36,6 +37,7 @@ namespace PeakSentinel.Ui
         public Sprite Shield => _shield.Sprite;
         public Sprite Dot => _dot.Sprite;
         public Sprite Clover => _clover.Sprite;
+        public PlatformSprites Platforms => _platforms;
 
         public GameObject Canvas(string name, int sortingOrder)
         {

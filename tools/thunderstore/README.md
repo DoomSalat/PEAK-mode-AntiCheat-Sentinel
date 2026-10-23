@@ -43,7 +43,7 @@ Every setting in the window tells you in plain words what happens if you turn it
 
 - **Log, Items, Cheats, Other** — findings with search, colours (red — a cheat or a block, orange — a guess, green — a fix you applied, brown — info) explained by a legend at the top of the Log tab, and the switches.
 - **Fix** — next to findings that can be undone: revive a killed player, wake a knocked-out one, return a teleported one, relight a campfire, put the fog back, put the time of day and the run timer back.
-- **Players** — every player with their Steam avatar, a status face, a blue shield if they run Peak Sentinel too, what they did and their ping (lag or cheats?). **Mute** (for anyone): everything that player sends is ignored on your side for the session, voice included — to you they freeze, go silent and can do nothing, even if they rejoin. On Unmute everything they did meanwhile is caught up: statuses, effects, death or revive, their ghost, objects they made or removed. In the Esc menu their avatar turns grey and crossed out. Kick and Ban for the host.
+- **Players** — every player with their Steam avatar, a status face, a blue shield if they run Peak Sentinel too, their platform (PC, Mac, PlayStation, Xbox, Switch, Android, iOS), what they did and their ping (lag or cheats?). **Mute** (for anyone): everything that player sends is ignored on your side for the session, voice included — to you they freeze, go silent and can do nothing, even if they rejoin. On Unmute everything they did meanwhile is caught up: statuses, effects, death or revive, their ghost, objects they made or removed. In the Esc menu their avatar turns grey and crossed out. Kick and Ban for the host.
 - **Bans** — your permanent ban list with Unban; copy it to the clipboard and share it with friends.
 - **Export** — save the whole session report to a file.
 - The window header always shows whether your lobby is protected: green when the host runs Peak Sentinel (or you are the host), orange when the host has none. It updates when the host changes.
@@ -97,3 +97,7 @@ Where to send them:
 
 - **GitHub**: [open an issue](https://github.com/DoomSalat/PEAK-mode-AntiCheat-Sentinel/issues) and drag the files into it.
 - **PEAK Modding Community** on Discord: [discord.com/servers/peak-modding-community](https://discord.com/servers/peak-modding-community-1363179626435707082).
+
+## Special thanks
+
+- **fwend**

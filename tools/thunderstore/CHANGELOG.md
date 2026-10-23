@@ -1,5 +1,9 @@
 # Changelog
 
+## Next
+
+- Cross-play: the Players tab shows which platform each player is on (PC, Mac, PlayStation, Xbox, Switch, Android, iOS) with an icon.
+
 ## 1.1.2
 
 - More crash protection: broken run settings (also when a client asks the host to start the run), broken map item data and NaN or infinite body positions are always refused. Hiding the map's loose items is now host-only.

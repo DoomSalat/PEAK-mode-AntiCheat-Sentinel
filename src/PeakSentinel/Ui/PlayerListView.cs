@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using PeakSentinel.Reporting;
 using Photon.Pun;
+using Portningsbolaget.Platforms;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -106,6 +107,8 @@ namespace PeakSentinel.Ui
             if (_services.Presence.Runs(player))
                 _ui.Icon(status, _ui.Shield, FaceSize);
 
+            AddPlatform(status, PlayerPlatforms.FamilyOf(player));
+
             bool muted = _actions.IsMuted(player);
             _ui.Flexible(_ui.Label(status, (findings.ProblemsOf(actor) ?? NoIssues) + (muted ? RichText.Warning(MutedNote) : string.Empty), LineSize, _actions.ColorOf(standing), true), 1f, 0f);
 
@@ -115,6 +118,16 @@ namespace PeakSentinel.Ui
             ping.alignment = TextAlignmentOptions.BottomRight;
             ping.textWrappingMode = TextWrappingModes.NoWrap;
             _pings[actor] = ping;
+        }
+
+        private void AddPlatform(Transform status, PlatformUtility.PlatformFamily family)
+        {
+            if (family == PlatformUtility.PlatformFamily.None)
+                return;
+
+            Color tint = _ui.Platforms.TintOf(family);
+            _ui.Icon(status, _ui.Platforms.Of(family), FaceSize).color = tint;
+            _ui.Label(status, PlayerPlatforms.NameOf(family), LineSize, tint, false);
         }
 
         private void AddButtons(Transform buttons, PhotonPlayer player)
@@ -168,7 +181,7 @@ namespace PeakSentinel.Ui
                 return _signature.ToString();
 
             foreach (PhotonPlayer player in PhotonNetwork.PlayerList)
-                _signature.Append('|').Append(player.ActorNumber).Append(player.NickName).Append(player.IsMasterClient).Append(_services.Presence.Runs(player));
+                _signature.Append('|').Append(player.ActorNumber).Append(player.NickName).Append(player.IsMasterClient).Append(_services.Presence.Runs(player)).Append(PlayerPlatforms.FamilyOf(player));
 
             return _signature.ToString();
         }
