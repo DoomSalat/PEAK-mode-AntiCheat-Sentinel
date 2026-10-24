@@ -2,7 +2,7 @@
   "name": "Peak_Sentinel",
   "version_number": "{VERSION}",
   "website_url": "https://github.com/DoomSalat/PEAK-mode-AntiCheat-Sentinel",
-  "description": "Tired of cheaters? Not perfect, but cheaters live by the same limits. Shows who did it, blocks what can be blocked, kick and ban. In progress: True Final Ascent and Speedrun. False alarm? Send your logs, see the page. Thanks to fwend.",
+  "description": "Tired of cheaters? Not perfect, but cheaters live by the same limits. Shows who did it, blocks what can be blocked, kick and ban. Resync fixes Piggyback desync. In progress: True Final Ascent and Speedrun. False alarm? Send logs. Thanks to fwend.",
   "dependencies": [
     "BepInEx-BepInExPack_PEAK-5.4.75301"
   ]

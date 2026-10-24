@@ -17,6 +17,8 @@ namespace PeakSentinel.Detection
         private const float DefaultRadius = 20f;
         private const float ReachMargin = 5f;
         private const float AuraReach = 25f;
+        private const string RadiatingSource = "a player radiating stamina nearby";
+        private const string AmuletSource = "a stamina amulet nearby";
 
         private readonly List<(float Time, Vector3 Origin, float Radius, string Source)> _recent = new List<(float Time, Vector3 Origin, float Radius, string Source)>();
         private readonly ItemLocator _locator;
@@ -34,7 +36,7 @@ namespace PeakSentinel.Detection
         public bool Inspect(RpcCall call)
         {
             if (call.Method == MassAffliction && call.Argument(0) is Vector3 origin && call.Argument(1) is float radius)
-                Remember(origin, radius, "a stamina amulet nearby");
+                Remember(origin, radius, AmuletSource);
             else if (call.Method == DaggerBuff && call.Component<RitualDaggerFeedBehavior>() != null)
                 Remember(call.View.transform.position, Everywhere, DaggerSource);
             else if (call.Method == ItemAreaAffliction && call.View != null)
@@ -50,6 +52,10 @@ namespace PeakSentinel.Detection
 
             float now = Time.time;
             _recent.RemoveAll(effect => now - effect.Time > MemorySeconds);
+            string aura = AuraNear(character);
+
+            if (aura != null)
+                return aura;
 
             foreach ((float _, Vector3 origin, float radius, string source) in _recent)
             {
@@ -59,7 +65,7 @@ namespace PeakSentinel.Detection
                     return source;
             }
 
-            return AuraNear(character);
+            return null;
         }
 
         private string AuraNear(Character character)
@@ -70,13 +76,19 @@ namespace PeakSentinel.Detection
                     continue;
 
                 if (other.refs.afflictions.HasAfflictionType(Affliction.AfflictionType.RadiateInfiniteStam, out _))
-                    return "a player radiating stamina nearby";
+                    return RememberAura(other, RadiatingSource);
 
                 if (_locator.Holds<InfiniteStamAmulet>(other))
-                    return "a stamina amulet nearby";
+                    return RememberAura(other, AmuletSource);
             }
 
             return null;
+        }
+
+        private string RememberAura(Character source, string description)
+        {
+            Remember(source.Center, AuraReach, description); // The aura's last stamina ticks outlive it by a second or two, so it stays a source for MemorySeconds
+            return description;
         }
 
         private float RadiusOf(RpcCall call)

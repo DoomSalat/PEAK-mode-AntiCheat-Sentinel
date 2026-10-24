@@ -56,7 +56,7 @@ namespace PeakSentinel.Detection
             PhotonView consumerView = call.ViewAt(0);
             Item item = call.Component<Item>();
 
-            if (consumerView == null || item == null || !consumerView.TryGetComponent(out Character consumer) || consumer.IsLocal || IsCooked(item))
+            if (consumerView == null || item == null || !consumerView.TryGetComponent(out Character consumer) || consumer.IsLocal || IsCooked(item) || item.TryGetComponent(out Action_RandomMushroomEffect _))
                 return true;
 
             foreach (Action_InflictPoison poison in item.GetComponents<Action_InflictPoison>())

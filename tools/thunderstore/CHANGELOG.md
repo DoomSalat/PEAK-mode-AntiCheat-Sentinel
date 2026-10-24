@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.4
+
+- Roots mushrooms are no longer reported as "status lock": their effect is random, so a status may not change after eating one.
+- With the Piggyback mod: Resync also fixes a stuck carry (after a quick pick up and drop you could not pick the player up again). Resync on yourself drops your carries for everyone; Resync on another player clears their stuck carry state on your side.
+- New option (off by default), Other tab: nobody can pick you up onto their back while you are not knocked out. The pick-up is refused and dropped for everyone; carrying you when you are passed out still works.
+- Infinite stamina from a player's stamina aura (an artifact) is no longer reported as "no source" in the last seconds after the aura ends.
+
 ## 1.1.3
 
 - Cross-play: the Players tab shows which platform each player is on (PC, Mac, PlayStation, Xbox, Switch, Android, iOS) with an icon.

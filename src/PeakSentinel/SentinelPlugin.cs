@@ -21,7 +21,7 @@ namespace PeakSentinel
     {
         public const string Guid = "peaksentinel";
         public const string Name = "Peak Sentinel";
-        public const string Version = "1.1.3";
+        public const string Version = "1.1.4";
 
         private const string TraceFile = "PeakSentinel.log";
         private const string BansFile = "PeakSentinel.bans.txt";
@@ -99,6 +99,7 @@ namespace PeakSentinel
                 items,
                 hands,
                 new KickShield(report, settings.Other, ascent, kicks),
+                new CarryShield(report, settings.Other),
                 new HarmAudit(report, guard, detection, locator, forces, cooking, ascent, cheatKills, host.AddComponent<DelayedCalls>()),
                 new WorldAudit(report, guard, detection),
                 new ControlAudit(guard, detection),
@@ -122,7 +123,7 @@ namespace PeakSentinel
             SentinelPresence presence = host.AddComponent<SentinelPresence>();
             presence.Initialize(report, Version);
             DesyncFixer desync = host.AddComponent<DesyncFixer>();
-            desync.Initialize(report, settings.Other, ledger);
+            desync.Initialize(report, settings.Other, ledger, new CarryReset());
             BanGuard banGuard = host.AddComponent<BanGuard>();
             banGuard.Initialize(report, bans, mutes, kicker);
             host.AddComponent<CheatModScan>().Initialize(report, settings.Detection, kicker);

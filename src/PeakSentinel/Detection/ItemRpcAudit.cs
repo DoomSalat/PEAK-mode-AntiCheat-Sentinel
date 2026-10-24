@@ -12,6 +12,7 @@ namespace PeakSentinel.Detection
     {
         private const string PassportItem = "Passport";
         private const string UnknownItem = "unknown item";
+        private const string MissingViewNote = "Photon drops it, nothing changes";
         private const float JoinSyncSeconds = 15f;
         private const float SpawnSyncSeconds = 15f;
         private const float CloneReachMargin = 2f;
@@ -194,7 +195,21 @@ namespace PeakSentinel.Detection
 
         private bool CheckFromOwner(RpcCall call, string action)
         {
-            return call.FromOwner || call.FromHost || Refuse(call.Sender, $"{action} {PlayerNames.Name(call.Owner)}", false);
+            if (call.FromOwner || call.FromHost || OwnsView(call))
+                return true;
+
+            if (call.View == null)
+            {
+                _report.Notice(call.Sender, FindingCategory.Items, $"{action} an object this host does not have ({MissingViewNote})");
+                return true;
+            }
+
+            return Refuse(call.Sender, $"{action} {PlayerNames.Name(call.Owner)}", false);
+        }
+
+        private bool OwnsView(RpcCall call)
+        {
+            return call.View != null && call.Sender != null && call.View.OwnerActorNr == call.Sender.ActorNumber;
         }
 
         private bool Refuse(PhotonPlayer sender, string action, bool mine)

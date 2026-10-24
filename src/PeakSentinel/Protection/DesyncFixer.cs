@@ -26,11 +26,13 @@ namespace PeakSentinel.Protection
         private SuspicionReport _report;
         private OtherSettings _settings;
         private StateLedger _ledger;
+        private CarryReset _carry;
         private float _nextScan;
 
-        public void Initialize(SuspicionReport report, OtherSettings settings, StateLedger ledger)
+        public void Initialize(SuspicionReport report, OtherSettings settings, StateLedger ledger, CarryReset carry)
         {
             _ledger = ledger;
+            _carry = carry;
             _report = report;
             _settings = settings;
         }
@@ -52,8 +54,9 @@ namespace PeakSentinel.Protection
         public void Resync(PhotonPlayer player)
         {
             int replayed = _ledger.Reapply(player);
-            _report.Notice(player, FindingCategory.Other, $"resynced by you: {replayed} of their latest state updates were applied again");
-            Fix(PlayerHandler.GetPlayerCharacter(player), "by you");
+            Character character = PlayerHandler.GetPlayerCharacter(player);
+            _report.Notice(player, FindingCategory.Other, $"resynced by you: {replayed} of their latest state updates were applied again{ClearCarry(character)}");
+            Fix(character, "by you");
         }
 
         public void ResyncMe()
@@ -72,7 +75,8 @@ namespace PeakSentinel.Protection
             me.photonView.RPC(RpcNames.SyncPetrify, RpcTarget.Others, me.data.petrifyAmount);
             me.refs.afflictions.PushStatuses();
             me.refs.afflictions.PushAfflictions();
-            _report.Notice(PhotonNetwork.LocalPlayer, FindingCategory.Other, "resynced yourself for everyone: stood up and woke up on their screens, statuses, effects and petrification sent again");
+            string carry = _carry.Applies ? $", {_carry.DropMine(me)} piggyback carries dropped for everyone" : string.Empty;
+            _report.Notice(PhotonNetwork.LocalPlayer, FindingCategory.Other, $"resynced yourself for everyone: stood up and woke up on their screens, statuses, effects and petrification sent again{carry}");
         }
 
         public void Fix(Character character, string reason)
@@ -119,6 +123,15 @@ namespace PeakSentinel.Protection
             track = (syncer, 0f, -CooldownSeconds);
             _tracks[character] = track;
             return true;
+        }
+
+        private string ClearCarry(Character character)
+        {
+            if (character == null || Character.localCharacter == null || !_carry.Applies)
+                return string.Empty;
+
+            int cleared = _carry.ClearStale(character) + _carry.ClearStale(Character.localCharacter);
+            return $", {cleared} stuck piggyback states cleared on your side";
         }
 
         private IEnumerator Chill(Character character, CharacterSyncer syncer)

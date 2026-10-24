@@ -24,6 +24,8 @@ namespace PeakSentinel.Ui.Pages
         private const string ShieldEveryoneHint = "anyone kicked while kicks are off in the run is stood back up (the push still lands)";
         private const string InKickModeHint = "also stands up players kicked honestly while kicks are on";
         private const string AsClientHint = "the protection of everyone also works while you are not the host";
+        private const string RefuseCarryLabel = "Protect me: nobody can pick me up onto their back unless I am knocked out";
+        private const string RefuseCarryHint = "a pick-up while you are awake is refused and dropped for everyone; carrying you when you are passed out still works";
 
         private readonly FeedSection _feed;
 
@@ -46,6 +48,8 @@ namespace PeakSentinel.Ui.Pages
             Toggle asClient = binder.BindIndented(page, 2, $"{ShieldAsClientLabel} {RichText.Warning(ShieldAsClientWarning)}", other.ShieldEveryoneFromKicksAsClient);
             binder.Depend(asClient, () => other.IgnoreKicks.Value && other.ShieldEveryoneFromKicks.Value);
             binder.Hint(page, 2, AsClientHint, host => host ? HintScope.NotNeeded : HintScope.Everyone);
+            binder.Bind(page, RefuseCarryLabel, other.RefuseCarryWhileAwake);
+            binder.Hint(page, 0, RefuseCarryHint, host => HintScope.You);
             _feed = new FeedSection(context, page, FindingCategory.Other);
         }
 
