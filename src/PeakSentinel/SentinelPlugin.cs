@@ -21,7 +21,7 @@ namespace PeakSentinel
     {
         public const string Guid = "peaksentinel";
         public const string Name = "Peak Sentinel";
-        public const string Version = "1.1.4";
+        public const string Version = "1.1.5";
 
         private const string TraceFile = "PeakSentinel.log";
         private const string BansFile = "PeakSentinel.bans.txt";
@@ -39,6 +39,7 @@ namespace PeakSentinel
             SentinelHooks.Report = report;
             SentinelHooks.Environment = new EnvironmentMarks();
             SentinelHooks.Traps = new EnvironmentMarks();
+            SentinelHooks.Portals = new PeakPortals();
 
             GameObject host = new GameObject(Name) { hideFlags = HideFlags.HideAndDontSave };
             DontDestroyOnLoad(host);
@@ -101,7 +102,7 @@ namespace PeakSentinel
                 new KickShield(report, settings.Other, ascent, kicks),
                 new CarryShield(report, settings.Other),
                 new HarmAudit(report, guard, detection, locator, forces, cooking, ascent, cheatKills, host.AddComponent<DelayedCalls>()),
-                new WorldAudit(report, guard, detection),
+                new WorldAudit(report, guard, detection, SentinelHooks.Portals),
                 new ControlAudit(guard, detection),
                 new CarryAudit(guard, detection),
                 new BuildAudit(report, detection, settings.Flood),
@@ -109,7 +110,7 @@ namespace PeakSentinel
                 new PushAudit(guard, detection, forces, kicks),
                 new ItemUseAudit(guard, detection, uses, host.AddComponent<StatusRestorer>()),
                 new BalloonAudit(report, guard, detection, settings.Protection, spawns, objects),
-                new KnockdownAudit(report, guard, detection, forces, SentinelHooks.Environment, kicks, blame),
+                new KnockdownAudit(report, guard, detection, forces, SentinelHooks.Environment, kicks, blame, spawns),
                 areas,
                 effects,
                 statuses);

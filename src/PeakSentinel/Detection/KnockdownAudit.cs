@@ -12,6 +12,7 @@ namespace PeakSentinel.Detection
     {
         private const float LongFallSeconds = 3f;
         private const float EchoSeconds = 1f;
+        private const float JoinSyncSeconds = 15f;
         private const string Tag = "knocks other players down";
         private const string NoCause = "no kick, nothing they threw hit them";
         private const string SpawnedCause = "with an item they spawned out of nowhere";
@@ -23,10 +24,12 @@ namespace PeakSentinel.Detection
         private readonly EnvironmentMarks _environment;
         private readonly KickClock _kicks;
         private readonly SpawnBlame _blame;
+        private readonly SpawnClock _spawns;
         private readonly Dictionary<Character, (float At, float Seconds)> _ownFalls = new Dictionary<Character, (float At, float Seconds)>();
 
-        public KnockdownAudit(SuspicionReport report, VictimGuard guard, DetectionSettings detection, LegitForces forces, EnvironmentMarks environment, KickClock kicks, SpawnBlame blame)
+        public KnockdownAudit(SuspicionReport report, VictimGuard guard, DetectionSettings detection, LegitForces forces, EnvironmentMarks environment, KickClock kicks, SpawnBlame blame, SpawnClock spawns)
         {
+            _spawns = spawns;
             _guard = guard;
             _blame = blame;
             _kicks = kicks;
@@ -49,7 +52,7 @@ namespace PeakSentinel.Detection
                 return true;
             }
 
-            if (!_detection.HarmToOthers.Value || call.Sender == null || call.Owner == null || call.FromOwner || call.FromHost || _kicks.JustKicked(call.Sender))
+            if (!_detection.HarmToOthers.Value || call.Sender == null || call.Owner == null || call.FromOwner || call.FromHost || _kicks.JustKicked(call.Sender) || JustLoaded())
                 return true;
 
             Character victim = call.Component<Character>();
@@ -82,6 +85,12 @@ namespace PeakSentinel.Detection
         private bool EchoesOwnFall(Character victim, float seconds)
         {
             return _ownFalls.TryGetValue(victim, out (float At, float Seconds) own) && Time.time - own.At <= EchoSeconds && Mathf.Approximately(own.Seconds, seconds);
+        }
+
+        private bool JustLoaded()
+        {
+            Character me = Character.localCharacter;
+            return me == null || _spawns.SpawnedWithin(me, JoinSyncSeconds); // Right after loading, the falls queued while we loaded play at once and our own game sent none of them
         }
 
         private float SecondsOf(RpcCall call)

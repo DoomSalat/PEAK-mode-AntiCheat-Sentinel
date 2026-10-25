@@ -16,6 +16,7 @@ namespace PeakSentinel.Detection
         private const float ConsumeSeconds = 3f;
         private const float TieWindowSeconds = 1.5f;
         private const int TiesPerUse = 3;
+        private const float FeedSeconds = 5f;
 
         private readonly SuspicionReport _report;
         private readonly VictimGuard _guard;
@@ -24,6 +25,7 @@ namespace PeakSentinel.Detection
         private readonly SpawnClock _spawns;
         private readonly ForeignObjects _objects;
         private readonly Dictionary<int, (float Since, int Count)> _ties = new Dictionary<int, (float Since, int Count)>();
+        private readonly Dictionary<int, float> _fedAt = new Dictionary<int, float>();
 
         public BalloonAudit(SuspicionReport report, VictimGuard guard, DetectionSettings detection, ProtectionSettings protection, SpawnClock spawns, ForeignObjects objects)
         {
@@ -37,11 +39,17 @@ namespace PeakSentinel.Detection
 
         public bool Watches(string method)
         {
-            return method == RpcNames.TieBalloon;
+            return method == RpcNames.TieBalloon || method == RpcNames.StartFeed;
         }
 
         public bool Inspect(RpcCall call)
         {
+            if (call.Method == RpcNames.StartFeed)
+            {
+                NoteFeed(call);
+                return true;
+            }
+
             TiedBalloon balloon = call.Component<TiedBalloon>();
 
             if (balloon == null || call.Sender == null || call.FromHost || call.FromLocal)
@@ -76,7 +84,7 @@ namespace PeakSentinel.Detection
             if (_spawns.JoinedRoomWithin(JoinSyncSeconds))
                 return true;
 
-            bool used = HoldsBalloon(self) || Time.time - self.data.lastConsumedItem < ConsumeSeconds;
+            bool used = HoldsBalloon(self) || Time.time - self.data.lastConsumedItem < ConsumeSeconds || FedBalloon(self);
 
             if (used && !Overtied(call.Sender))
                 return true;
@@ -109,6 +117,20 @@ namespace PeakSentinel.Detection
             ties = fresh ? (Time.time, 1) : (ties.Since, ties.Count + 1);
             _ties[actor] = ties;
             return ties.Count > TiesPerUse;
+        }
+
+        private void NoteFeed(RpcCall call)
+        {
+            Item item = call.Component<Item>();
+            PhotonView receiver = call.ViewAt(1);
+
+            if (item != null && receiver != null && item.TryGetComponent(out Action_Balloon _))
+                _fedAt[receiver.ViewID] = Time.time;
+        }
+
+        private bool FedBalloon(Character character)
+        {
+            return _fedAt.TryGetValue(character.photonView.ViewID, out float fed) && Time.time - fed < FeedSeconds;
         }
 
         private bool HoldsBalloon(Character character)

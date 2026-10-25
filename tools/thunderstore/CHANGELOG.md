@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.5
+
+- Ending the run through the portal at the peak is no longer blocked as "forced the game to end": any player who enters it ends the game with their own command.
+- Giving a balloon to a friend (feeding it to them) is no longer reported as "tied a balloon to themselves without holding one".
+- No more "knocked X down" suspicions right after you join: the falls queued while you were loading play at once, so knockdowns are not checked for 15 s after your character appears.
+
 ## 1.1.4
 
 - Roots mushrooms are no longer reported as "status lock": their effect is random, so a status may not change after eating one.

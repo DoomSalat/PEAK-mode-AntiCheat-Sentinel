@@ -22,6 +22,7 @@ namespace PeakSentinel.Patches
         public static CookingEchoes Cooking { get; set; } // Set: assigned once by SentinelPlugin, filled by the cooking patch
         public static LootLedger Loot { get; set; } // Set: assigned once by SentinelPlugin, filled by the loot roll patch
         public static EnvironmentMarks Environment { get; set; } // Set: assigned once by SentinelPlugin, filled by the environment patches
+        public static PeakPortals Portals { get; set; } // Set: assigned once by SentinelPlugin, filled by the peak portal patch
         public static EnvironmentMarks Traps { get; set; } // Set: assigned once by SentinelPlugin, filled by the trap patches
         public static SentinelWindow Window { get; set; } // Set: assigned once by SentinelPlugin, frees the cursor while open
     }

@@ -26,6 +26,14 @@ namespace PeakSentinel.Patches
         private const float CannonReach = 6f;
 
         [HarmonyPostfix]
+        [HarmonyPatch(typeof(PeakGatePortal), "Update")]
+        public static void NotePeakPortal(PeakGatePortal __instance)
+        {
+            if (SentinelHooks.Portals != null)
+                SentinelHooks.Portals.Note(__instance);
+        }
+
+        [HarmonyPostfix]
         [HarmonyPatch(typeof(AntiSphere), "FixedUpdate")]
         public static void MarkAntiGravity(AntiSphere __instance)
         {

@@ -15,15 +15,18 @@ namespace PeakSentinel.Detection
         private const string WorldTag = "breaks host-only game events";
         private const float PeakCheckOffset = 10f;
         private const float StandingReach = 15f;
+        private const float PortalReach = 10f;
 
         private static readonly Dictionary<string, Rule[]> Rules = BuildRules(); // Static: fixed table of host-only RPCs (same as PEAKER)
 
         private readonly SuspicionReport _report;
         private readonly VictimGuard _guard;
         private readonly DetectionSettings _detection;
+        private readonly PeakPortals _portals;
 
-        public WorldAudit(SuspicionReport report, VictimGuard guard, DetectionSettings detection)
+        public WorldAudit(SuspicionReport report, VictimGuard guard, DetectionSettings detection, PeakPortals portals)
         {
+            _portals = portals;
             _guard = guard;
             _report = report;
             _detection = detection;
@@ -58,7 +61,7 @@ namespace PeakSentinel.Detection
             switch (rule.Allowed)
             {
                 case Sender.Host:
-                    return call.FromHost || (call.Method == RpcNames.TriggerHelicopter && IsHelicopterLegit(call.View));
+                    return call.FromHost || (call.Method == RpcNames.TriggerHelicopter && IsHelicopterLegit(call.View)) || (call.Method == RpcNames.EndGame && call.FromOwner && NearPortal(call.Sender));
 
                 case Sender.Owner:
                     return call.FromOwner || call.FromHost;
@@ -163,6 +166,12 @@ namespace PeakSentinel.Detection
         {
             Character standing = PlayerHandler.GetPlayerCharacter(call.Sender);
             return standing != null && (standing.Center - call.View.transform.position).sqrMagnitude <= StandingReach * StandingReach;
+        }
+
+        private bool NearPortal(Photon.Realtime.Player sender)
+        {
+            Character character = PlayerHandler.GetPlayerCharacter(sender);
+            return character != null && _portals.Near(character.Center, PortalReach); // Any player who enters the peak gate portal ends the run with their own RPCEndGame
         }
 
         private bool IsHelicopterLegit(PhotonView view)
