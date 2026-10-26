@@ -29,9 +29,17 @@ namespace PeakSentinel.Patches
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(PhotonView), nameof(PhotonView.RPC), new[] { typeof(string), typeof(RpcTarget), typeof(object[]) })]
-        public static void NoteOwnRpc(string methodName)
+        public static void NoteOwnRpc(PhotonView __instance, string methodName, object[] parameters)
         {
             SentinelHooks.Hands?.NoteOutgoing(methodName);
+            SentinelHooks.Router?.InspectOwn(__instance, methodName, parameters);
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(PhotonView), nameof(PhotonView.RPC), new[] { typeof(string), typeof(PhotonPlayer), typeof(object[]) })]
+        public static void CheckOwnDirectRpc(PhotonView __instance, string methodName, object[] parameters)
+        {
+            SentinelHooks.Router?.InspectOwn(__instance, methodName, parameters);
         }
 
         [HarmonyPrefix]
@@ -50,6 +58,9 @@ namespace PeakSentinel.Patches
         public static void InspectInstantiate(PunInstantiateParameters parameters, bool instantiateEvent, GameObject __result)
         {
             SentinelHooks.Instantiate?.Inspect(parameters.creator, __result, instantiateEvent, parameters.timestamp);
+
+            if (!instantiateEvent)
+                SentinelHooks.Instantiate?.CheckOwnSpawn(parameters.creator, parameters.prefabName);
         }
 
         [HarmonyPrefix]

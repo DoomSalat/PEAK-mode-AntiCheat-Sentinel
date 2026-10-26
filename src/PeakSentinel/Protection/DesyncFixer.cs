@@ -27,10 +27,12 @@ namespace PeakSentinel.Protection
         private OtherSettings _settings;
         private StateLedger _ledger;
         private CarryReset _carry;
+        private SelfResync _selfResync;
         private float _nextScan;
 
-        public void Initialize(SuspicionReport report, OtherSettings settings, StateLedger ledger, CarryReset carry)
+        public void Initialize(SuspicionReport report, OtherSettings settings, StateLedger ledger, CarryReset carry, SelfResync selfResync)
         {
+            _selfResync = selfResync;
             _ledger = ledger;
             _carry = carry;
             _report = report;
@@ -55,7 +57,7 @@ namespace PeakSentinel.Protection
         {
             int replayed = _ledger.Reapply(player);
             Character character = PlayerHandler.GetPlayerCharacter(player);
-            _report.Notice(player, FindingCategory.Other, $"resynced by you: {replayed} of their latest state updates were applied again{ClearCarry(character)}");
+            _report.LogAction(player, $"resynced: {replayed} of their latest state updates were applied again{ClearCarry(character)}");
             Fix(character, "by you");
         }
 
@@ -66,17 +68,24 @@ namespace PeakSentinel.Protection
             if (me == null || !PhotonNetwork.InRoom)
                 return;
 
-            if (me.data.fallSeconds <= 0f)
-                me.photonView.RPC(RpcNames.UnFall, RpcTarget.Others);
-
-            if (!me.data.passedOut && !me.data.dead)
-                me.photonView.RPC(RpcNames.UnPassOut, RpcTarget.Others);
-
-            me.photonView.RPC(RpcNames.SyncPetrify, RpcTarget.Others, me.data.petrifyAmount);
-            me.refs.afflictions.PushStatuses();
-            me.refs.afflictions.PushAfflictions();
+            _selfResync.Push();
             string carry = _carry.Applies ? $", {_carry.DropMine(me)} piggyback carries dropped for everyone" : string.Empty;
-            _report.Notice(PhotonNetwork.LocalPlayer, FindingCategory.Other, $"resynced yourself for everyone: stood up and woke up on their screens, statuses, effects and petrification sent again{carry}");
+            _report.LogAction(PhotonNetwork.LocalPlayer, $"resynced yourself for everyone: alive or dead, standing, awake, crouching, statuses, effects and petrification sent again{carry}");
+        }
+
+        public void ResyncAll()
+        {
+            if (!PhotonNetwork.InRoom)
+                return;
+
+            foreach (PhotonPlayer player in PhotonNetwork.PlayerList)
+            {
+                if (!player.IsLocal)
+                    Resync(player);
+            }
+
+            ResyncMe();
+            _report.LogAction(PhotonNetwork.LocalPlayer, "Resync all: every player resynced on your side, you for everyone");
         }
 
         public void Fix(Character character, string reason)

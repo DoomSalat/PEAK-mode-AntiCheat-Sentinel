@@ -26,6 +26,7 @@ namespace PeakSentinel.Network
         public const string StartCarry = "RPCA_StartCarry";
         public const string DropCarried = "RPCA_Drop";
         public const string StartFeed = "SendFeedDataRPC";
+        public const string GetFedItem = "GetFedItemRPC";
         public const string InitFog = "RPC_InitFog";
         public const string StickFakeItem = "RPC_RequestStickFakeItemToPlayer";
         public const string SpawnAndGrab = "InstantiateAndGrabRPC";

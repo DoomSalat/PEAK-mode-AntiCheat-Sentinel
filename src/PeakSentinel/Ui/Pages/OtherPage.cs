@@ -25,6 +25,8 @@ namespace PeakSentinel.Ui.Pages
         private const string InKickModeHint = "also stands up players kicked honestly while kicks are on";
         private const string AsClientHint = "the protection of everyone also works while you are not the host";
         private const string RefuseCarryLabel = "Protect me: nobody can pick me up onto their back unless I am knocked out";
+        private const string RefuseDaggerLabel = "Protect me: no ritual dagger can kill me";
+        private const string RefuseDaggerHint = "a sacrifice with a ritual dagger is refused, you stay alive; the others still get the dagger's buff";
         private const string RefuseCarryHint = "a pick-up while you are awake is refused and dropped for everyone; carrying you when you are passed out still works";
 
         private readonly FeedSection _feed;
@@ -50,6 +52,8 @@ namespace PeakSentinel.Ui.Pages
             binder.Hint(page, 2, AsClientHint, host => host ? HintScope.NotNeeded : HintScope.Everyone);
             binder.Bind(page, RefuseCarryLabel, other.RefuseCarryWhileAwake);
             binder.Hint(page, 0, RefuseCarryHint, host => HintScope.You);
+            binder.Bind(page, RefuseDaggerLabel, other.RefuseDaggerSacrifice);
+            binder.Hint(page, 0, RefuseDaggerHint, host => HintScope.You);
             _feed = new FeedSection(context, page, FindingCategory.Other);
         }
 

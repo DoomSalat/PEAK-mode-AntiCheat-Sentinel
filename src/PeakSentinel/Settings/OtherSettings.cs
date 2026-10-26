@@ -15,6 +15,7 @@ namespace PeakSentinel.Settings
             AllowHonestKicks = config.Bind(Section, "AllowHonestKicks", true, "Needs IgnoreKicks. Turn your own kick protection off by itself while the run has kicks on, so only cheat kicks are ignored.");
             ShieldEveryoneFromKicks = config.Bind(Section, "ShieldEveryoneFromKicks", true, "Needs IgnoreKicks. As host, while the run has kicks off (kicks then come only from cheats): a kicked player is stood back up at once (RPCA_UnFall to everyone). The push itself still lands, only the ragdoll is cancelled.");
             ShieldEveryoneInKickMode = config.Bind(Section, "ShieldEveryoneInKickMode", false, "Needs ShieldEveryoneFromKicks. Also stand kicked players back up when the run has kicks on and the kick is honest.");
+            RefuseDaggerSacrifice = config.Bind(Section, "RefuseDaggerSacrifice", false, "Nobody can sacrifice you with a ritual dagger: the dagger's kill is refused on your client, which owns your character. The others still get the dagger's buff.");
             RefuseCarryWhileAwake = config.Bind(Section, "RefuseCarryWhileAwake", false, "Nobody can pick you up onto their back while you are not knocked out (refused on your client and dropped for everyone else). Carrying you while you are passed out still works.");
             ShieldEveryoneFromKicksAsClient = config.Bind(Section, "ShieldEveryoneFromKicksAsClient", false, "Needs ShieldEveryoneFromKicks. Also apply it while you are not the host. Other anticheats may see your RPCs on other players as suspicious.");
         }
@@ -28,5 +29,6 @@ namespace PeakSentinel.Settings
         public ConfigEntry<bool> ShieldEveryoneFromKicksAsClient { get; }
         public ConfigEntry<bool> ShieldEveryoneInKickMode { get; }
         public ConfigEntry<bool> RefuseCarryWhileAwake { get; }
+        public ConfigEntry<bool> RefuseDaggerSacrifice { get; }
     }
 }

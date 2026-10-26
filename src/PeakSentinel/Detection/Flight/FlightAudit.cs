@@ -52,7 +52,7 @@ namespace PeakSentinel.Detection.Flight
 
             foreach (Character character in Character.AllCharacters)
             {
-                if (character != null && (!character.IsLocal || CheckLocal) && !character.isBot && character.photonView.Owner != null)
+                if (character != null && (!character.IsLocal || CheckLocal || _detection.CheckMyself.Value) && !character.isBot && character.photonView.Owner != null)
                     Sample(character, Time.time);
             }
         }
@@ -124,7 +124,7 @@ namespace PeakSentinel.Detection.Flight
 
         private void Punish(Character character, FlightTrack track, string action)
         {
-            bool snapBack = _detection.BlockFlight.Value && PhotonNetwork.IsMasterClient && track.LastGround.HasValue && !character.IsLocal;
+            bool snapBack = _detection.BlockFlight.Value && PhotonNetwork.IsMasterClient && track.LastGround.HasValue && !character.IsLocal && !_report.Spares(character.photonView.Owner);
             _report.Tag(character.photonView.Owner, FliesTag);
 
             if (snapBack)

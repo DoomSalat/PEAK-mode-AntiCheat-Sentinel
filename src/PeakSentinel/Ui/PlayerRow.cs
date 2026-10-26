@@ -5,8 +5,9 @@ namespace PeakSentinel.Ui
 {
     public sealed class PlayerRow
     {
-        public PlayerRow(TextMeshProUGUI name, Image face, TextMeshProUGUI problems, TextMeshProUGUI ping)
+        public PlayerRow(TextMeshProUGUI name, Image face, TextMeshProUGUI life, TextMeshProUGUI problems, TextMeshProUGUI ping)
         {
+            Life = life;
             Name = name;
             Face = face;
             Problems = problems;
@@ -15,6 +16,7 @@ namespace PeakSentinel.Ui
 
         public TextMeshProUGUI Name { get; }
         public Image Face { get; }
+        public TextMeshProUGUI Life { get; }
         public TextMeshProUGUI Problems { get; }
         public TextMeshProUGUI Ping { get; }
     }

@@ -26,20 +26,29 @@ namespace PeakSentinel.Reporting
         private const string KickedPrefix = "kicked: ";
         private const string FixLevel = "FIX";
         private const string FixPrefix = "fix: ";
+        private const string ActionLevel = "ACTION";
+        private const string ActionPrefix = "by you: ";
+        private const string SelfCheckLevel = "SELF-CHECK";
+        private const string SelfCheckPrefix = "self-check: ";
+        private const string SelfCheckNote = " (your own action, only a warning: nothing was blocked)";
+        private const string TrustedNote = " (trusted by you, allowed)";
         private const string UnsureNote = " (heuristic, may be wrong)";
 
         private readonly ManualLogSource _log;
         private readonly DebugTrace _trace;
         private readonly FindingLog _findings;
+        private readonly TrustList _trust;
         private readonly Dictionary<string, float> _lastShown = new Dictionary<string, float>();
 
-        public SuspicionReport(ManualLogSource log, DebugTrace trace, FindingLog findings)
+        public SuspicionReport(ManualLogSource log, DebugTrace trace, FindingLog findings, TrustList trust)
         {
             _log = log;
             _trace = trace;
             _findings = findings;
+            _trust = trust;
         }
 
+        public TrustList Trust => _trust;
         public PlayerConnectionLog Feed { get; set; } // Set: remembered by the connection log patch once the HUD wakes up
 
         public void Flag(PhotonPlayer culprit, FindingCategory category, string action, bool blocked = false, Repair repair = null)
@@ -56,7 +65,7 @@ namespace PeakSentinel.Reporting
         {
             Tag(culprit, tag);
             Report(culprit, category, action, FindingKind.Blocked, null, BlockedPrefix);
-            return false;
+            return Spares(culprit);
         }
 
         public bool Recover(PhotonPlayer culprit, FindingCategory category, string tag, string action)
@@ -68,7 +77,7 @@ namespace PeakSentinel.Reporting
         public bool Recover(PhotonPlayer culprit, FindingCategory category, string action, bool unsure = false)
         {
             Report(culprit, category, unsure ? action + UnsureNote : action, FindingKind.Recovered, null, RecoveredPrefix);
-            return false;
+            return Spares(culprit);
         }
 
         public void Kick(PhotonPlayer culprit, FindingCategory category, string tag, string action)
@@ -81,7 +90,7 @@ namespace PeakSentinel.Reporting
         {
             Tag(culprit, tag);
             Flag(culprit, category, action, block, repair);
-            return !block;
+            return !block || Spares(culprit);
         }
 
         public void Fix(FindingLog.Finding finding)
@@ -98,6 +107,16 @@ namespace PeakSentinel.Reporting
             Show(PlayerNames.Name(PhotonNetwork.LocalPlayer), text, ColorOf(FeedTone.Good));
         }
 
+        public void LogAction(PhotonPlayer target, string action)
+        {
+            LogAction(PlayerNames.Actor(target), PlayerNames.Name(target), action);
+        }
+
+        public void LogAction(string name, string action)
+        {
+            LogAction(0, name, action);
+        }
+
         public void Notice(PhotonPlayer culprit, FindingCategory category, string action)
         {
             _log.LogInfo($"{NoticeLevel} {PlayerNames.Name(culprit)} (actor {PlayerNames.Actor(culprit)}): {action}");
@@ -111,19 +130,57 @@ namespace PeakSentinel.Reporting
             Show(PlayerNames.Name(subject), action, ColorOf(tone));
         }
 
+        public bool Spares(PhotonPlayer player)
+        {
+            return player != null && (player.IsLocal || _trust.Trusts(player));
+        }
+
         public void Tag(PhotonPlayer culprit, string tag)
         {
+            if (culprit != null && culprit.IsLocal)
+                return;
+
             _findings.Tag(PlayerNames.Actor(culprit), tag);
         }
 
         private void Report(PhotonPlayer culprit, FindingCategory category, string action, FindingKind kind, Repair repair, string lead)
         {
+            if (culprit != null && culprit.IsLocal)
+            {
+                WarnSelf(category, action);
+                return;
+            }
+
+            if (Spares(culprit))
+            {
+                Notice(culprit, category, action + TrustedNote);
+                return;
+            }
+
             string name = PlayerNames.Name(culprit);
             string level = LevelOf(kind);
             _log.LogWarning($"{level} {name} (actor {PlayerNames.Actor(culprit)}): {action}");
             _trace.Finding(level, culprit, action);
             _findings.Add(PlayerNames.Actor(culprit), name, lead + action, kind, category, repair);
             Show(name, action, ColorOf(kind == FindingKind.Suspicious ? FeedTone.Suspect : FeedTone.Cheat), lead);
+        }
+
+        private void LogAction(int actor, string name, string action)
+        {
+            _log.LogInfo($"{ActionLevel} {name}: {action}");
+            _trace.Finding(ActionLevel, PhotonNetwork.LocalPlayer, $"{name}: {action}");
+            _findings.Add(actor, name, ActionPrefix + action, FindingKind.Fix, FindingCategory.Other);
+            Show(name, action, ColorOf(FeedTone.Good), ActionPrefix);
+        }
+
+        private void WarnSelf(FindingCategory category, string action)
+        {
+            string name = PlayerNames.Name(PhotonNetwork.LocalPlayer);
+            string text = action + SelfCheckNote;
+            _log.LogWarning($"{SelfCheckLevel} {name}: {text}");
+            _trace.Finding(SelfCheckLevel, PhotonNetwork.LocalPlayer, text);
+            _findings.Add(PlayerNames.Actor(PhotonNetwork.LocalPlayer), name, SelfCheckPrefix + text, FindingKind.Suspicious, category);
+            Show(name, text, ColorOf(FeedTone.Suspect), SelfCheckPrefix);
         }
 
         private string BlockPrefix()

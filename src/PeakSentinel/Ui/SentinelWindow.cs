@@ -125,6 +125,7 @@ namespace PeakSentinel.Ui
             _ui.Stretch(layout);
             BuildHeader(layout, panel);
             BuildTabs(layout);
+            _ui.Divider(layout);
 
             RectTransform body = _ui.Column(layout, 0f, new RectOffset(0, 0, 0, 0));
             _ui.Flexible(body, 1f, 1f);
@@ -134,7 +135,7 @@ namespace PeakSentinel.Ui
             AddPage(body, page => new CheatsPage(context, page, _settings.Detection));
             AddPage(body, page => new OtherPage(context, page, _settings.Other));
             AddPage(body, page => new PlayersPage(context, page, _services, _avatars));
-            AddPage(body, page => new BansPage(_ui, page, _services.Bans));
+            AddPage(body, page => new BansPage(_ui, page, _services.Bans, _services.Report));
             AddPage(body, page => new SpeedrunPage(context, page, _services, _settings.Speedrun));
             Select(_tab);
         }

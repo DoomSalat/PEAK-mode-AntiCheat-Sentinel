@@ -18,6 +18,10 @@ namespace PeakSentinel.Ui.Pages
         private const string FlightLabel = "Flying: staying in the air without gravity";
         private const string HeuristicWarning = "(heuristic: may be wrong)";
         private const string HarmHint = "the attacker is logged; Block: the command does nothing on your side, others are safe only with their own Sentinel";
+        private const string CheckMyselfLabel = "Check myself too, like any other player (only warnings, nothing of mine is blocked)";
+        private const string CheckMyselfHint = "every enabled check also runs on your own commands, spawns, flight, stamina, effects, markers and name";
+        private const string ReviveMeLabel = "Block revives of me with no source (a cheat revives you)";
+        private const string ReviveMeHint = "off: you are revived and the reviver is only logged";
         private const string WorldHint = "the non-host is logged; Block: the event does not happen on your side, others need their own Sentinel";
         private const string DangerousHint = "the spawner is logged; Block: not created on your side; as host they are removed for everyone";
         private const string FlightHint = "flyers are logged; Snap back: the flyer is teleported back and knocked down for everyone";
@@ -52,12 +56,16 @@ namespace PeakSentinel.Ui.Pages
             context.Ui.Fixed(scroll, 0f, SettingsHeight);
             context.Ui.Flexible(scroll, 1f, 0f);
             SettingsBinder binder = context.Binder;
+            binder.Bind(list, CheckMyselfLabel, detection.CheckMyself);
+            binder.Hint(list, 0, CheckMyselfHint, host => HintScope.You);
             binder.BindPair(list, HarmLabel, detection.HarmToOthers, BlockLabel, detection.BlockHarmToOthers, SecondToggleWidth);
             binder.Hint(list, 0, HarmHint, host => HintScope.You);
             binder.BindPair(list, ForcedLabel, detection.ForcedActions, BlockLabel, detection.BlockForcedActions, SecondToggleWidth);
             binder.Hint(list, 0, ForcedHint, host => HintScope.You);
             binder.BindPair(list, WorldLabel, detection.HostOnlyEvents, BlockLabel, detection.BlockHostOnlyEvents, SecondToggleWidth);
             binder.Hint(list, 0, WorldHint, host => HintScope.You);
+            binder.Bind(list, ReviveMeLabel, detection.BlockRevivesOfMe);
+            binder.Hint(list, 0, ReviveMeHint, host => HintScope.You);
             binder.BindPair(list, DangerousLabel, detection.DangerousSpawns, BlockLabel, detection.BlockDangerousSpawns, SecondToggleWidth);
             binder.Hint(list, 0, DangerousHint, host => HintScope.You);
             binder.BindPair(list, DestroyLabel, detection.ObjectDestroy, BlockLabel, detection.BlockObjectDestroy, SecondToggleWidth);

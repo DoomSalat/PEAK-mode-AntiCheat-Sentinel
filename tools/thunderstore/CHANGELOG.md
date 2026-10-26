@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.1.6
+
+- Every button you press on a player is logged as a green "by you: ..." line: Mute/Unmute, Kick, Bring to me, Trust, Resync, Resync all and Unban (bans were already logged).
+- Cheat "petrify yourself and drive around as a statue": a petrified scout statue spawned by a non-host is a dangerous spawn unless a ritual dagger has just killed that player (the only vanilla case). Not created on your side, removed for everyone when you are the host.
+- Cheats "turn into a cockroach / tumbleweed / tornado / ghost": a non-host spawning a mob that is not an item (beetle...), a tumbleweed, a tornado, a bee swarm or the big ghost ball is a dangerous spawn, whatever the prefab is called: not created on your side, removed for everyone when you are the host. The debug trace now records every spawned object, not only items.
+- The airport passport a slow-loading player gets while the host is already loading the island is no longer blocked as "spawned 'Passport' into own hands".
+- Self-check no longer warns that you cloned your character when your new character is created on entering the run.
+- New option (on by default), Cheats tab: "Check myself too". Every enabled check also runs on you, like on any other player: your own commands, spawns, flight, stamina, effects, statuses, cheat-mod markers and name. Anything suspicious gives you an orange "self-check" warning in the log and the feed; nothing of yours is ever blocked.
+- Clear in the log now clears only the log lines: player tags (PEAK-MX, Cherry and other cheat marks) and counters stay, so marked cheaters keep their badges.
+- When an attack on you is refused, Sentinel now also sends your real state to everyone else (alive or dead, standing, awake, crouching, petrification, statuses), once after a spam. A refused petrification or cheat pick-up is also undone on the others' screens.
+- Players tab: "Resync all" at the top; "Bring to me" (host) teleports a player to you to rescue them from lag or falling through the map; each player shows alive, knocked out or dead.
+- New option (off by default), Other tab: no ritual dagger can kill you. A sacrifice with the dagger is refused on your side and you stay alive; the others still get the dagger's buff.
+- New option (on by default), Cheats tab: "Block revives of me with no source" on its own switch. Off: a cheat revive of you goes through and is only logged.
+- Players tab: "Trust this player" in a player's profile. Until you leave the game nothing they do is blocked, undone or kicked by Sentinel; their findings are written as grey notices. Bans and broken-data protection still apply.
+- As a client you no longer "block" what other players do to themselves or to others (self-revive, self-teleport, self-zombie, attacks on other players): only the host can undo it, so these are plain cheat findings. Blocks that protect your own game (attacks on you, host-only world events, crash data) stay.
+- As host, a self-teleport sent back for everyone is logged as RECOVERED.
+
 ## 1.1.5
 
 - Ending the run through the portal at the peak is no longer blocked as "forced the game to end": any player who enters it ends the game with their own command.

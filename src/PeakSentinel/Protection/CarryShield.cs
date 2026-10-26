@@ -23,7 +23,7 @@ namespace PeakSentinel.Protection
 
         public bool Inspect(RpcCall call)
         {
-            if (!_settings.RefuseCarryWhileAwake.Value || call.Sender == null || call.FromLocal)
+            if (!_settings.RefuseCarryWhileAwake.Value || call.Sender == null || call.FromLocal || _report.Spares(call.Sender))
                 return true;
 
             Character carrier = call.Component<Character>();

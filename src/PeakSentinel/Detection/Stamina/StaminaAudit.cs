@@ -56,7 +56,7 @@ namespace PeakSentinel.Detection.Stamina
 
             foreach (Character character in Character.AllCharacters)
             {
-                if (character != null && (!character.IsLocal || CheckLocal) && !character.isBot && character.photonView.Owner != null)
+                if (character != null && (!character.IsLocal || CheckLocal || _detection.CheckMyself.Value) && !character.isBot && character.photonView.Owner != null)
                     Sample(character, Time.time);
             }
         }

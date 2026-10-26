@@ -14,9 +14,13 @@ namespace PeakSentinel.Network
         private readonly List<IRpcAudit> _audits;
         private readonly DebugTrace _trace;
         private readonly StateLedger _ledger;
+        private readonly TrustList _trust;
+        private readonly Func<bool> _checksMe;
 
-        public RpcRouter(DebugTrace trace, StateLedger ledger, params IRpcAudit[] audits)
+        public RpcRouter(DebugTrace trace, StateLedger ledger, TrustList trust, Func<bool> checksMe, params IRpcAudit[] audits)
         {
+            _checksMe = checksMe;
+            _trust = trust;
             _ledger = ledger;
             _trace = trace;
             _audits = new List<IRpcAudit>(audits);
@@ -53,10 +57,26 @@ namespace PeakSentinel.Network
                     allowed &= InspectSafely(audit, call);
             }
 
+            allowed |= _trust.Trusts(sender);
+
             if (allowed)
                 _ledger.Note(sender, rpc);
 
             return allowed;
+        }
+
+        public void InspectOwn(PhotonView view, string method, object[] arguments)
+        {
+            if (view == null || method == null || !PhotonNetwork.InRoom || !_checksMe())
+                return;
+
+            RpcCall call = new RpcCall(method, PhotonNetwork.LocalPlayer, view, arguments, true);
+
+            foreach (IRpcAudit audit in _audits)
+            {
+                if (audit.Watches(method))
+                    InspectSafely(audit, call);
+            }
         }
 
         private bool InspectSafely(IRpcAudit audit, RpcCall call)

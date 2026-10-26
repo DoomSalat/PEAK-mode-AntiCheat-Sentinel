@@ -52,6 +52,9 @@ namespace PeakSentinel.Detection
                 return true;
             }
 
+            if (call.SelfCheck)
+                return true; // Our own game sends the vanilla echo falls (frog tongue, rescue hook) too: checking them would only warn about the game itself
+
             if (!_detection.HarmToOthers.Value || call.Sender == null || call.Owner == null || call.FromOwner || call.FromHost || _kicks.JustKicked(call.Sender) || JustLoaded())
                 return true;
 

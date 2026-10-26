@@ -19,6 +19,7 @@ namespace PeakSentinel.Detection
         private const string CloneAction = "spawned a second copy of their character (cheat bots)";
         private const string RemovedNote = ", removed for everyone";
         private const string CharacterPrefab = "Character";
+        private const string StatuePrefab = "PetrifiedScout";
         private const string AdminMenuBot = "AdminBot";
         private const string AdminMenuTag = "Admin_menukz user";
         private const float GiveSeconds = 15f;
@@ -30,6 +31,8 @@ namespace PeakSentinel.Detection
             "MushroomZombie", "MushroomZombie_Player", "Character_Scoutmaster",
         };
 
+        private readonly HostOnlyPrefabs _hostOnly = new HostOnlyPrefabs();
+        private readonly DaggerFeeds _daggerFeeds;
         private readonly SuspicionReport _report;
         private readonly DebugTrace _trace;
         private readonly DetectionSettings _detection;
@@ -42,8 +45,9 @@ namespace PeakSentinel.Detection
         private readonly ItemUseLedger _uses;
         private bool _removeNext;
 
-        public InstantiateAudit(SuspicionReport report, DebugTrace trace, DetectionSettings detection, ProtectionSettings protection, ItemRpcAudit items, ForeignObjects objects, ItemLocator locator, TrueAscentState ascent, SpawnBlame blame, ItemUseLedger uses)
+        public InstantiateAudit(SuspicionReport report, DebugTrace trace, DetectionSettings detection, ProtectionSettings protection, ItemRpcAudit items, ForeignObjects objects, ItemLocator locator, TrueAscentState ascent, SpawnBlame blame, ItemUseLedger uses, DaggerFeeds daggerFeeds)
         {
+            _daggerFeeds = daggerFeeds;
             _uses = uses;
             _blame = blame;
             _ascent = ascent;
@@ -66,6 +70,9 @@ namespace PeakSentinel.Detection
                 _report.Flag(creator, FindingCategory.Cheats, $"spawned a bot ('{prefab}') with the Admin_menukz cheat menu (the menu marks its bots '{AdminMenuBot}')");
             }
 
+            if (_report.Spares(creator))
+                return true;
+
             if (_detection.DangerousSpawns.Value && prefab == CharacterPrefab && creator != null && !creator.IsLocal && PlayerHandler.GetPlayerCharacter(creator) != null)
                 return RefuseClone(creator, viewId);
             Item shooter = creator == null || creator.IsLocal || unchecked(PhotonNetwork.ServerTimestamp - sentAt) > PunCodes.CachedAgeMilliseconds ? null : ShooterOf(creator, prefab);
@@ -85,7 +92,7 @@ namespace PeakSentinel.Detection
                 return !blockShot || removeShot;
             }
 
-            if (!_detection.DangerousSpawns.Value || creator == null || creator.IsMasterClient || !Dangerous.Contains(prefab))
+            if (!_detection.DangerousSpawns.Value || creator == null || creator.IsMasterClient || !(IsDangerous(prefab, prefabPath) || IsFakeStatue(prefab, creator)))
                 return true;
 
             bool block = _detection.BlockDangerousSpawns.Value;
@@ -113,10 +120,13 @@ namespace PeakSentinel.Detection
                 return;
             }
 
-            if (created == null || !created.TryGetComponent(out Item item))
+            if (created == null)
                 return;
 
             _trace.Instantiate(creator, created.name, created.transform.position);
+
+            if (!created.TryGetComponent(out Item item))
+                return;
 
             if (!fromNetwork || creator == null || creator.IsMasterClient || unchecked(PhotonNetwork.ServerTimestamp - sentAt) > PunCodes.CachedAgeMilliseconds)
                 return;
@@ -175,7 +185,7 @@ namespace PeakSentinel.Detection
 
         private void ReportSpawn(PhotonPlayer creator, GameObject created, bool remove, string action)
         {
-            if (!remove)
+            if (!remove || _report.Spares(creator))
             {
                 _report.Flag(creator, FindingCategory.Items, action);
                 return;
@@ -200,6 +210,27 @@ namespace PeakSentinel.Detection
             }
 
             return null;
+        }
+
+        public void CheckOwnSpawn(PhotonPlayer creator, string prefabPath)
+        {
+            if (!_detection.CheckMyself.Value || creator == null || !creator.IsLocal)
+                return;
+
+            string prefab = PrefabOf(prefabPath);
+
+            if (_detection.DangerousSpawns.Value && !creator.IsMasterClient && IsDangerous(prefab, prefabPath))
+                _report.Refuse(creator, FindingCategory.Cheats, DangerousTag, $"spawned '{prefab}' (only the host may spawn it)", false);
+        }
+
+        private bool IsFakeStatue(string prefab, PhotonPlayer creator)
+        {
+            return prefab == StatuePrefab && !_daggerFeeds.StabbedRecently(PlayerHandler.GetPlayerCharacter(creator)); // Only the host spawns statues on death; a player spawns their own only when a dagger with a checkpoint kills them
+        }
+
+        private bool IsDangerous(string prefab, string prefabPath)
+        {
+            return Dangerous.Contains(prefab) || _hostOnly.IsHostOnly(prefabPath);
         }
 
         private string PrefabOf(string path)

@@ -6,8 +6,9 @@ namespace PeakSentinel.Network
 {
     public readonly struct RpcCall
     {
-        public RpcCall(string method, PhotonPlayer sender, PhotonView view, object[] arguments)
+        public RpcCall(string method, PhotonPlayer sender, PhotonView view, object[] arguments, bool selfCheck = false)
         {
+            SelfCheck = selfCheck;
             Method = method;
             Sender = sender;
             View = view;
@@ -18,9 +19,10 @@ namespace PeakSentinel.Network
         public PhotonPlayer Sender { get; }
         public PhotonView View { get; }
         public object[] Arguments { get; }
+        public bool SelfCheck { get; }
         public PhotonPlayer Owner => View == null ? null : View.Owner;
         public bool FromHost => Sender != null && Sender.IsMasterClient;
-        public bool FromLocal => Sender != null && Sender.IsLocal;
+        public bool FromLocal => !SelfCheck && Sender != null && Sender.IsLocal; // A self-check runs our own outgoing RPC through the audits as if a remote player sent it
         public bool FromOwner => IsSame(Sender, Owner);
 
         public object Argument(int index)

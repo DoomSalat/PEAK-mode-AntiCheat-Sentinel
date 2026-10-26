@@ -38,7 +38,8 @@ namespace PeakSentinel.Detection
 
             string reason = ReasonAgainst(call, carrier, target);
             // Block only protects your own screen: the cheater still sees the victim on their back, while on yours the victim stays on the ground
-            return reason == null || _guard.Refuse(call.Sender, target, FindingCategory.Cheats, Tag, $"picked up {PlayerNames.Name(targetView.Owner)} {reason}", _detection.BlockForcedActions.Value);
+            Recovery drop = new Recovery("dropped them", to => carrier.photonView.RPC(RpcNames.DropCarried, to, targetView), true);
+            return reason == null || _guard.Refuse(call.Sender, target, FindingCategory.Cheats, Tag, $"picked up {PlayerNames.Name(targetView.Owner)} {reason}", _detection.BlockForcedActions.Value, drop);
         }
 
         private string ReasonAgainst(RpcCall call, Character carrier, Character target)

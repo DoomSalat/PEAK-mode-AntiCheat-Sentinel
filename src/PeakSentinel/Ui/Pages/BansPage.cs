@@ -25,13 +25,15 @@ namespace PeakSentinel.Ui.Pages
 
         private readonly UiFactory _ui;
         private readonly BanList _bans;
+        private readonly SuspicionReport _report;
         private readonly TextMeshProUGUI _header;
         private readonly TextMeshProUGUI _shareResult;
         private readonly RectTransform _rows;
         private string _shown;
 
-        public BansPage(UiFactory ui, Transform parent, BanList bans)
+        public BansPage(UiFactory ui, Transform parent, BanList bans, SuspicionReport report)
         {
+            _report = report;
             _ui = ui;
             _bans = bans;
             RectTransform top = ui.Row(parent, 10f);
@@ -96,7 +98,9 @@ namespace PeakSentinel.Ui.Pages
 
         private void Unban(string userId)
         {
+            BanEntry entry = _bans.Entries.FirstOrDefault(ban => ban.UserId == userId);
             _bans.Unban(userId);
+            _report.LogAction(string.IsNullOrEmpty(entry.Name) ? userId : entry.Name, $"unbanned ({userId})");
             Refresh();
         }
     }

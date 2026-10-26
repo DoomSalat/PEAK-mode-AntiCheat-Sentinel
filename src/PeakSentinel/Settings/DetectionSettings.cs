@@ -12,6 +12,8 @@ namespace PeakSentinel.Settings
             BlockHarmToOthers = config.Bind(Section, "BlockHarmToOthers", true, "Refuse such commands on this client (the victim stays unharmed here; it protects you fully when you are the victim).");
             HostOnlyEvents = config.Bind(Section, "HostOnlyEvents", true, "Report a non-host who triggers events only the host may send: end of game, revive, helicopter, fog, campfire, bridges, eruption, beans, ropes, pitons, bees, foreign banana or ghost.");
             BlockHostOnlyEvents = config.Bind(Section, "BlockHostOnlyEvents", true, "Refuse such events on this client.");
+            CheckMyself = config.Bind(Section, "CheckMyself", true, "Check yourself too: your own commands, spawns, flight, stamina, effects, statuses, cheat-mod markers and name go through the same enabled checks as other players. Only an orange self-check warning, nothing of yours is ever blocked.");
+            BlockRevivesOfMe = config.Bind(Section, "BlockRevivesOfMe", true, "Refuse a revive of you with no source (a cheat revive), on its own switch. Off: you are revived and it is only logged.");
             DangerousSpawns = config.Bind(Section, "DangerousSpawns", true, "Report a non-host who spawns bee swarms, tornados, mushroom zombies, the Scoutmaster or Bing Bong effects.");
             BlockDangerousSpawns = config.Bind(Section, "BlockDangerousSpawns", true, "Do not create such objects on this client.");
             Flight = config.Bind(Section, "Flight", true, "Report a player who stays in the air without gravity acting on them (fly cheats). Thresholds are in the [Flight] section.");
@@ -37,6 +39,8 @@ namespace PeakSentinel.Settings
         public ConfigEntry<bool> BlockHarmToOthers { get; }
         public ConfigEntry<bool> HostOnlyEvents { get; }
         public ConfigEntry<bool> BlockHostOnlyEvents { get; }
+        public ConfigEntry<bool> BlockRevivesOfMe { get; }
+        public ConfigEntry<bool> CheckMyself { get; }
         public ConfigEntry<bool> DangerousSpawns { get; }
         public ConfigEntry<bool> BlockDangerousSpawns { get; }
         public ConfigEntry<bool> Flight { get; }

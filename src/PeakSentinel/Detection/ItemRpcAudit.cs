@@ -3,6 +3,7 @@ using PeakSentinel.Network;
 using PeakSentinel.Reporting;
 using PeakSentinel.Settings;
 using Photon.Pun;
+using UnityEngine;
 using Zorro.Core.Serizalization;
 using PhotonPlayer = Photon.Realtime.Player;
 
@@ -11,6 +12,7 @@ namespace PeakSentinel.Detection
     public sealed class ItemRpcAudit : IRpcAudit
     {
         private const string PassportItem = "Passport";
+        private const float SceneLoadSeconds = 30f;
         private const string UnknownItem = "unknown item";
         private const string MissingViewNote = "Photon drops it, nothing changes";
         private const float JoinSyncSeconds = 15f;
@@ -50,6 +52,9 @@ namespace PeakSentinel.Detection
 
         public bool Inspect(RpcCall call)
         {
+            if (call.SelfCheck)
+                return true; // Our own item RPCs are already checked when they run on our side (mine, AllowMySpawns)
+
             switch (call.Method)
             {
                 case RpcNames.SpawnItemInHand:
@@ -227,7 +232,7 @@ namespace PeakSentinel.Detection
         private bool IsAirportPassport(RpcCall call, string item)
         {
             Character character = call.Component<Character>();
-            return item == PassportItem && character != null && character.inAirport;
+            return item == PassportItem && character != null && (character.inAirport || Time.timeSinceLevelLoad < SceneLoadSeconds); // A client still loading the airport asks for its passport after the host has already moved on to the island
         }
 
         private bool IsGrappleStartItem(string item)

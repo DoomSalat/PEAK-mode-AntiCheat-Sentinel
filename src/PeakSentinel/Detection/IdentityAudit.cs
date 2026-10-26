@@ -49,7 +49,7 @@ namespace PeakSentinel.Detection
 
             foreach (PhotonPlayer player in PhotonNetwork.PlayerList)
             {
-                if (!player.IsLocal)
+                if (!player.IsLocal || _detection.CheckMyself.Value)
                     Check(player);
             }
         }
@@ -109,7 +109,7 @@ namespace PeakSentinel.Detection
 
             string local = SteamAPI.IsSteamRunning() ? SteamUser.GetSteamID().m_SteamID.ToString() : null;
 
-            if (id == local && _reported.Add((player.ActorNumber, SteamIdKey + id)))
+            if (!player.IsLocal && id == local && _reported.Add((player.ActorNumber, SteamIdKey + id)))
             {
                 _report.Refuse(player, FindingCategory.Cheats, SpoofTag, "uses your Steam ID (impersonation)", false);
                 return;

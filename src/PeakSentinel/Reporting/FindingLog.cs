@@ -75,7 +75,6 @@ namespace PeakSentinel.Reporting
         public void Clear()
         {
             _findings.Clear();
-            _players.Clear();
             Version++;
         }
 

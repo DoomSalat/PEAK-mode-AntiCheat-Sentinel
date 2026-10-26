@@ -59,7 +59,7 @@ namespace PeakSentinel.Detection
 
             foreach (PhotonPlayer player in PhotonNetwork.PlayerList)
             {
-                if (!player.IsLocal)
+                if (!player.IsLocal || _detection.CheckMyself.Value)
                     Check(player);
             }
         }
@@ -73,7 +73,7 @@ namespace PeakSentinel.Detection
 
                 string action = $"is a {tag}";
 
-                if (!_detection.KickCheatModUsers.Value || !PhotonNetwork.IsMasterClient)
+                if (!_detection.KickCheatModUsers.Value || !PhotonNetwork.IsMasterClient || _report.Spares(player))
                 {
                     _report.Refuse(player, FindingCategory.Cheats, tag, action, false);
                     continue;

@@ -21,7 +21,7 @@ namespace PeakSentinel
     {
         public const string Guid = "peaksentinel";
         public const string Name = "Peak Sentinel";
-        public const string Version = "1.1.5";
+        public const string Version = "1.1.6";
 
         private const string TraceFile = "PeakSentinel.log";
         private const string BansFile = "PeakSentinel.bans.txt";
@@ -34,7 +34,8 @@ namespace PeakSentinel
             SentinelSettings settings = new SentinelSettings(Config, TraceFile);
             _trace = new DebugTrace(Path.Combine(Paths.BepInExRootPath, TraceFile), settings.Debug.TraceFile, settings.Debug.TraceAllRpcs);
             FindingLog findings = new FindingLog(settings.Manager.LogEntries);
-            SuspicionReport report = new SuspicionReport(Logger, _trace, findings);
+            TrustList trust = new TrustList();
+            SuspicionReport report = new SuspicionReport(Logger, _trace, findings, trust);
             SentinelHooks.Findings = findings;
             SentinelHooks.Report = report;
             SentinelHooks.Environment = new EnvironmentMarks();
@@ -49,10 +50,11 @@ namespace PeakSentinel
             LatencyMeter latency = new LatencyMeter();
             SpawnClock spawns = host.AddComponent<SpawnClock>();
             TrueAscentState ascent = new TrueAscentState();
+            SelfResync selfResync = new SelfResync(host.AddComponent<DelayedCalls>());
 
             GuardPackets(settings, report, mutes, latency);
-            AuditRpcs(host, settings, report, spawns, ledger, objects, ascent);
-            WindowServices services = Watch(host, settings, report, findings, mutes, latency, ledger, spawns, ascent);
+            AuditRpcs(host, settings, report, spawns, ledger, objects, ascent, selfResync);
+            WindowServices services = Watch(host, settings, report, findings, mutes, latency, ledger, spawns, ascent, selfResync);
             OpenWindow(host, settings, services);
 
             _harmony = new Harmony(Guid);
@@ -72,7 +74,7 @@ namespace PeakSentinel
             SentinelHooks.Gate = new PacketGate(report, settings.Detection, settings.Flood, mutes, latency, SentinelHooks.Traps);
         }
 
-        private void AuditRpcs(GameObject host, SentinelSettings settings, SuspicionReport report, SpawnClock spawns, StateLedger ledger, ForeignObjects objects, TrueAscentState ascent)
+        private void AuditRpcs(GameObject host, SentinelSettings settings, SuspicionReport report, SpawnClock spawns, StateLedger ledger, ForeignObjects objects, TrueAscentState ascent, SelfResync selfResync)
         {
             DetectionSettings detection = settings.Detection;
             ItemLocator locator = new ItemLocator();
@@ -80,7 +82,7 @@ namespace PeakSentinel
             CheatKills cheatKills = new CheatKills();
             SpawnBlame blame = new SpawnBlame();
             ItemUseLedger uses = new ItemUseLedger();
-            VictimGuard guard = new VictimGuard(report);
+            VictimGuard guard = new VictimGuard(report, selfResync);
             LegitForces forces = new LegitForces(locator, cooking, SentinelHooks.Traps, blame);
             AreaEffects areas = new AreaEffects(locator);
             ItemRpcAudit items = new ItemRpcAudit(report, settings.Protection, spawns, new BackpackSwap());
@@ -92,15 +94,18 @@ namespace PeakSentinel
 
             SentinelHooks.Hands = hands;
             SentinelHooks.Cooking = cooking;
-            SentinelHooks.Instantiate = new InstantiateAudit(report, _trace, detection, settings.Protection, items, objects, locator, ascent, blame, uses);
+            DaggerFeeds daggerFeeds = new DaggerFeeds();
+            SentinelHooks.Instantiate = new InstantiateAudit(report, _trace, detection, settings.Protection, items, objects, locator, ascent, blame, uses, daggerFeeds);
             KickClock kicks = new KickClock();
-            SentinelHooks.Router = new RpcRouter(_trace, ledger,
+            SentinelHooks.Router = new RpcRouter(_trace, ledger, report.Trust, () => detection.CheckMyself.Value,
                 new SyncDataGuard(report),
                 kicks,
                 items,
                 hands,
                 new KickShield(report, settings.Other, ascent, kicks),
                 new CarryShield(report, settings.Other),
+                new DaggerShield(report, settings.Other),
+                daggerFeeds,
                 new HarmAudit(report, guard, detection, locator, forces, cooking, ascent, cheatKills, host.AddComponent<DelayedCalls>()),
                 new WorldAudit(report, guard, detection, SentinelHooks.Portals),
                 new ControlAudit(guard, detection),
@@ -116,7 +121,7 @@ namespace PeakSentinel
                 statuses);
         }
 
-        private WindowServices Watch(GameObject host, SentinelSettings settings, SuspicionReport report, FindingLog findings, MuteList mutes, LatencyMeter latency, StateLedger ledger, SpawnClock spawns, TrueAscentState ascent)
+        private WindowServices Watch(GameObject host, SentinelSettings settings, SuspicionReport report, FindingLog findings, MuteList mutes, LatencyMeter latency, StateLedger ledger, SpawnClock spawns, TrueAscentState ascent, SelfResync selfResync)
         {
             BanList bans = new BanList(Path.Combine(Paths.ConfigPath, BansFile));
             PlayerKicker kicker = host.AddComponent<PlayerKicker>();
@@ -124,7 +129,7 @@ namespace PeakSentinel
             SentinelPresence presence = host.AddComponent<SentinelPresence>();
             presence.Initialize(report, Version);
             DesyncFixer desync = host.AddComponent<DesyncFixer>();
-            desync.Initialize(report, settings.Other, ledger, new CarryReset());
+            desync.Initialize(report, settings.Other, ledger, new CarryReset(), selfResync);
             BanGuard banGuard = host.AddComponent<BanGuard>();
             banGuard.Initialize(report, bans, mutes, kicker);
             host.AddComponent<CheatModScan>().Initialize(report, settings.Detection, kicker);
@@ -139,7 +144,7 @@ namespace PeakSentinel
             SentinelHooks.Loot = loot;
             SpeedrunMonitor speedrun = host.AddComponent<SpeedrunMonitor>();
             speedrun.Initialize(settings.Speedrun, report, loot, new RunJournal(Paths.BepInExRootPath, settings.Speedrun.RecordRun), flight, stamina);
-            return new WindowServices(findings, report, bans, banGuard, kicker, mutes, new ReportExport(Paths.BepInExRootPath, findings), latency, desync, presence, loot, ascent, speedrun);
+            return new WindowServices(findings, report, bans, banGuard, kicker, new PlayerTeleporter(report), mutes, new ReportExport(Paths.BepInExRootPath, findings), latency, desync, presence, loot, ascent, speedrun);
         }
 
         private void OpenWindow(GameObject host, SentinelSettings settings, WindowServices services)

@@ -37,7 +37,7 @@ namespace PeakSentinel.Protection
 
         public bool Inspect(RpcCall call)
         {
-            if (call.Sender == null || call.FromLocal)
+            if (call.Sender == null || call.FromLocal || _report.Spares(call.Sender))
                 return true;
 
             if (call.Method == RpcNames.Kick)

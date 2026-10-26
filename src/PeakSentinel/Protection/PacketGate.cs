@@ -74,6 +74,9 @@ namespace PeakSentinel.Protection
             if ((data.Code == PunCodes.SerializeEvent || data.Code == PunCodes.SerializeReliableEvent) && data.CustomData is object[] serialized && serialized.Length > 0 && serialized[0] is int sentAt)
                 _latency.Note(actor, sentAt);
 
+            if (_report.Spares(sender))
+                return true;
+
             if (!sender.IsMasterClient && !InGracePeriod() && !IsCached(data) && !IsFrameSync(data, sender))
                 CountRate(sender, data);
 

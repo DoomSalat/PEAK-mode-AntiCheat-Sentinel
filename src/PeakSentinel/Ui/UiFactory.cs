@@ -20,6 +20,7 @@ namespace PeakSentinel.Ui
         private const float SearchInset = 12f;
         private const float TrackInset = 7f;
         private const float KnobWidth = 18f;
+        private const float DividerHeight = 2f;
 
         private readonly CardSprites _sprites = new CardSprites();
         private readonly FaceSprites _faces = new FaceSprites();
@@ -274,6 +275,20 @@ namespace PeakSentinel.Ui
             SpriteSwap(slider, knob, _sprites.CardHover, _sprites.CardHover);
             slider.onValueChanged.AddListener(onChange);
             return slider;
+        }
+
+        public void Divider(Transform parent)
+        {
+            RectTransform element = Element("Divider", parent);
+            Image line = element.gameObject.AddComponent<Image>();
+            line.color = UiPalette.Ink;
+            line.raycastTarget = false;
+            Fixed(element, 0f, DividerHeight);
+        }
+
+        public void Spacer(Transform parent)
+        {
+            Flexible(Element("Spacer", parent), 1f, 0f);
         }
 
         public Image Icon(Transform parent, Sprite sprite, float size)

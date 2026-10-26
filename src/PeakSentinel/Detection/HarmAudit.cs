@@ -101,7 +101,7 @@ namespace PeakSentinel.Detection
                     return Refuse(call, character, CursesTag, $"zombified {victim}", null);
 
                 case RpcNames.Petrify:
-                    return Refuse(call, character, CursesTag, $"petrified {victim}", null);
+                    return Refuse(call, character, CursesTag, $"petrified {victim}", Revive(call.Sender, character, victim));
 
                 case RpcNames.SyncPetrify:
                     return Refuse(call, character, CursesTag, $"set the petrification of {victim} to {call.Argument(0)}%", Unpetrify(character, victim));
@@ -138,17 +138,10 @@ namespace PeakSentinel.Detection
                 return true;
             }
 
-            bool block = _detection.BlockHarmToOthers.Value;
             Vector3 place = self.Center;
+            Recovery sendBack = new Recovery("sent back", target => self.photonView.RPC(RpcNames.Warp, target, place, false), false);
             string action = $"teleported themselves {WhereTo(self, destination)} with no warp item";
-
-            if (block && PhotonNetwork.IsMasterClient)
-            {
-                self.photonView.RPC(RpcNames.Warp, RpcTarget.All, place, false);
-                action += ", sent back for everyone";
-            }
-
-            return _report.Refuse(call.Sender, FindingCategory.Cheats, SelfTeleportTag, action, block, Return(self, PlayerNames.Name(call.Sender))?.AsRepair());
+            return _guard.Refuse(call.Sender, self, FindingCategory.Cheats, SelfTeleportTag, action, _detection.BlockHarmToOthers.Value, sendBack, Return(self, PlayerNames.Name(call.Sender))?.AsRepair());
         }
 
         private bool IsDeathEcho(Character victim)
@@ -167,7 +160,7 @@ namespace PeakSentinel.Detection
             if (self == null || self.data.zombified || (Ascents.shouldSpawnZombie && self.refs.afflictions.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.Spores) >= ZombieSpores))
                 return true;
 
-            return _report.Refuse(call.Sender, FindingCategory.Cheats, CursesTag, "turned themselves into a zombie with no spores (console command or cheat)", _detection.BlockHarmToOthers.Value);
+            return _guard.Refuse(call.Sender, self, FindingCategory.Cheats, CursesTag, "turned themselves into a zombie with no spores (console command or cheat)", _detection.BlockHarmToOthers.Value);
         }
 
         private bool IsCannibalism(RpcCall call, Character victim)

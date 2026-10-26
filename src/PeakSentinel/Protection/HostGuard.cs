@@ -61,7 +61,7 @@ namespace PeakSentinel.Protection
                 return;
 
             bool mine = previous == PhotonNetwork.LocalPlayer.ActorNumber;
-            bool reclaim = mine && _settings.ReclaimHost.Value;
+            bool reclaim = mine && _settings.ReclaimHost.Value && !_report.Spares(thief);
             string victim = mine ? "you" : PlayerNames.Name(PhotonNetwork.CurrentRoom.GetPlayer(previous));
 
             if (!reclaim)

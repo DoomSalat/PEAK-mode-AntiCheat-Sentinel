@@ -38,16 +38,17 @@ namespace PeakSentinel.Detection
 
         public bool Inspect(RpcCall call)
         {
-            if (!_detection.HostOnlyEvents.Value || call.Sender == null || call.FromHost || call.FromLocal)
+            if (call.Sender == null || call.FromHost || call.FromLocal)
                 return true;
 
             Character target = call.Component<Character>();
 
-            if (target == null || HasSource(call, target))
+            if (target == null || (!target.IsLocal && !_detection.HostOnlyEvents.Value) || HasSource(call, target))
                 return true;
 
             string action = call.FromOwner ? "revived themselves with no source" : $"revived {PlayerNames.Name(call.Owner)} with no source (no statue, effigy, Book of Bones or skeleton)";
-            return _guard.Refuse(call.Sender, target, FindingCategory.Cheats, Tag, action, _detection.BlockHostOnlyEvents.Value);
+            bool block = target.IsLocal ? _detection.BlockRevivesOfMe.Value : _detection.BlockHostOnlyEvents.Value;
+            return _guard.Refuse(call.Sender, target, FindingCategory.Cheats, Tag, action, block);
         }
 
         private bool HasSource(RpcCall call, Character target)

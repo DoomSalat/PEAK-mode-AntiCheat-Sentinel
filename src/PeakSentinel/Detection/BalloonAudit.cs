@@ -103,7 +103,7 @@ namespace PeakSentinel.Detection
 
         private bool Remove(RpcCall call, TiedBalloon balloon, string tag, string action, bool block)
         {
-            if (!block)
+            if (!block || _report.Spares(call.Sender))
                 return _report.Refuse(call.Sender, FindingCategory.Cheats, tag, action, false);
 
             _objects.RemoveForEveryone(balloon.gameObject, call.Sender);
